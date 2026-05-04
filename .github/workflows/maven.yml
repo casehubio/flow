@@ -54,18 +54,3 @@ jobs:
         run: mvn --batch-mode deploy -DskipTests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Trigger downstream CI
-        if: |
-          ((github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-          github.event_name == 'workflow_dispatch' ||
-          github.event_name == 'repository_dispatch') && success()
-        run: |
-          for repo in flow; do
-            gh api repos/casehubio/$repo/dispatches \
-              -f event_type=upstream-published \
-              -f client_payload[source]="${GITHUB_REPOSITORY}" \
-              2>/dev/null && echo "  ✅ $repo triggered" || echo "  ⚠️  $repo trigger failed"
-          done
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
