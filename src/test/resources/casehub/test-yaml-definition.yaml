@@ -1,0 +1,34 @@
+dsl: "0.1"
+version: "1.0.0"
+name: YAML Test Case
+namespace: test-yaml
+title: Test case loaded from YAML
+spec:
+  capabilities:
+    - name: processData
+      description: Process data from context
+      inputSchema: "{ data: .data }"
+      outputSchema: "{ result: .result }"
+  workers:
+    - name: data-processor
+      description: Processes data
+      capabilities:
+        - processData
+      do:
+        - setResult:
+            set:
+              result: "processed"
+  bindings:
+    - name: trigger-on-data
+      capability: processData
+      on:
+        contextChange:
+          filter: '.data != null'
+  goals:
+    - name: dataProcessed
+      description: Data processing complete
+      condition: '.result == "processed"'
+  completion:
+    success:
+      allOf:
+        - dataProcessed
