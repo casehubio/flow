@@ -90,6 +90,21 @@ public class CaseInstanceService {
         .map(this::toCaseInstanceResponse);
   }
 
+  /**
+   * Get a case instance by ID.
+   *
+   * @param caseId case instance UUID
+   * @return case instance response with status and metadata
+   */
+  public Uni<CaseInstanceResponse> getCaseInstance(java.util.UUID caseId) {
+    return instanceRepository
+        .findByUuid(caseId)
+        .onItem()
+        .ifNull()
+        .failWith(() -> new CaseInstanceNotFoundException(caseId))
+        .map(this::toCaseInstanceResponse);
+  }
+
   private CaseInstanceResponse toCaseInstanceResponse(CaseInstance instance) {
     CaseMetaModel meta = instance.getCaseMetaModel();
     return new CaseInstanceResponse(
