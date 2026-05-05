@@ -18,6 +18,7 @@ package io.casehub.flow.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.casehub.api.model.CaseStatus;
+import io.casehub.flow.exception.CaseInstanceNotFoundException;
 import io.casehub.flow.exception.DefinitionNotFoundException;
 import io.casehub.flow.rest.dto.CaseInstanceResponse;
 import io.casehub.flow.rest.dto.StartCaseRequest;
@@ -27,6 +28,7 @@ import io.quarkus.test.vertx.RunOnVertxContext;
 import io.quarkus.test.vertx.UniAsserter;
 import jakarta.inject.Inject;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
@@ -112,6 +114,45 @@ class CaseInstanceServiceTest {
         () -> service.startCase(request), throwable -> {
           assertThat(throwable).isInstanceOf(DefinitionNotFoundException.class);
           assertThat(throwable.getMessage()).contains("No case definition found");
+        });
+  }
+
+  @Test
+  @RunOnVertxContext
+  void getCaseInstance_returnsInstance_whenExists(UniAsserter asserter) {
+    // Start a case first
+    StartCaseRequest startRequest =
+        new StartCaseRequest(
+            new CaseDefinitionRef("test-api", "Document Approval", "1.0.0"),
+            Map.of("documentId", "DOC-456"));
+
+    asserter.execute(
+        () ->
+            service
+                .startCase(startRequest)
+                .flatMap(
+                    startedCase ->
+                        service
+                            .getCaseInstance(startedCase.caseId())
+                            .invoke(
+                                response -> {
+                                  assertThat(response.caseId()).isEqualTo(startedCase.caseId());
+                                  assertThat(response.namespace()).isEqualTo("test-api");
+                                  assertThat(response.name()).isEqualTo("Document Approval");
+                                  assertThat(response.version()).isEqualTo("1.0.0");
+                                })));
+  }
+
+  @Test
+  @RunOnVertxContext
+  void getCaseInstance_throwsNotFoundException_whenNotFound(UniAsserter asserter) {
+    UUID nonExistentId = UUID.randomUUID();
+
+    asserter.assertFailedWith(
+        () -> service.getCaseInstance(nonExistentId),
+        throwable -> {
+          assertThat(throwable).isInstanceOf(CaseInstanceNotFoundException.class);
+          assertThat(throwable.getMessage()).contains("No case instance found");
         });
   }
 }
