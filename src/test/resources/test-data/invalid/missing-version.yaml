@@ -1,0 +1,8 @@
+dsl: "0.1"
+name: Missing Version Test
+namespace: test-invalid
+spec:
+  capabilities:
+    - name: doSomething
+      inputSchema: "{}"
+      outputSchema: "{}"

@@ -1,0 +1,7 @@
+dsl: "0.1"
+version: "1.0.0"
+name: Malformed
+namespace: test-invalid
+spec:
+  capabilities
+    - name: broken
