@@ -30,6 +30,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -58,22 +59,34 @@ public class CaseDefinitionService {
 
   @Inject CaseDefinitionRegistry caseDefinitionRegistry;
   @Inject Instance<CaseHub> caseHubs;
+  @Inject io.casehub.api.engine.CaseHubRuntime caseHubRuntime;
   private final Map<DefinitionKey, CaseHub> caseHubIndex = new ConcurrentHashMap<>();
   private volatile boolean cdiIndexed = false;
 
   private record DefinitionKey(String namespace, String name, String version) {}
 
   /** Simple CaseHub wrapper for definitions loaded from YAML or non-CDI classpath sources. */
-  private static class DefinitionOnlyCaseHub extends CaseHub {
+  private class DefinitionOnlyCaseHub extends CaseHub {
     private final CaseDefinition definition;
 
     DefinitionOnlyCaseHub(CaseDefinition definition) {
       this.definition = definition;
+      injectRuntime(this);
     }
 
     @Override
     public CaseDefinition getDefinition() {
       return definition;
+    }
+  }
+
+  private void injectRuntime(CaseHub hub) {
+    try {
+      Field runtimeField = CaseHub.class.getDeclaredField("runtime");
+      runtimeField.setAccessible(true);
+      runtimeField.set(hub, caseHubRuntime);
+    } catch (NoSuchFieldException | IllegalAccessException e) {
+      throw new RuntimeException("Failed to inject CaseHubRuntime into CaseHub wrapper", e);
     }
   }
 
