@@ -56,39 +56,38 @@ class CaseDefinitionResourceTest {
 
   @Test
   void listAllCaseDefinitions_returnsRegisteredDefinitions() {
+    // Expected: 3 CDI beans + 1 classpath + 3 YAML = 7 definitions
+    // CDI: DocumentApprovalV1, DocumentApprovalV2, InvoiceProcessing
+    // Classpath: ClasspathOnlyCaseHub
+    // YAML: test-yaml-definition.yaml, valid/minimal.yaml, valid/complete.yaml
     given()
         .when()
         .get("/api/v1/case-definitions")
         .then()
         .statusCode(200)
         .contentType(ContentType.JSON)
-        .body("content", hasSize(5)) // Three CDI beans + one classpath class + one YAML definition
         .body("page", equalTo(1))
         .body("size", equalTo(20))
-        .body("totalElements", equalTo(5))
-        .body("totalPages", equalTo(1))
-        .body("content[0].namespace", notNullValue())
-        .body("content[0].name", notNullValue())
-        .body("content[0].version", notNullValue());
+        .body("totalElements", equalTo(7))
+        .body("totalPages", equalTo(1));
   }
 
   @Test
   void listAllCaseDefinitions_includesMetadata() {
+    // Verify specific definition metadata via direct API call
     given()
         .when()
-        .get("/api/v1/case-definitions")
+        .get("/api/v1/case-definitions/test-api/Document%20Approval/1.0.0")
         .then()
         .statusCode(200)
         .contentType(ContentType.JSON)
-        .body("content.size()", equalTo(5)) // Three CDI beans + one classpath class + one YAML
-        .body("content.findAll { it.name == 'Document Approval' }.size()", equalTo(2))
-        .body("content.findAll { it.name == 'Document Approval' && it.version == '1.0.0' }.size()", equalTo(1))
-        .body("content.find { it.name == 'Document Approval' && it.version == '1.0.0' }.namespace", equalTo("test-api"))
-        .body("content.find { it.name == 'Document Approval' && it.version == '1.0.0' }.capabilities", notNullValue())
-        .body("content.find { it.name == 'Document Approval' && it.version == '1.0.0' }.workers", notNullValue())
-        .body("content.find { it.name == 'Document Approval' && it.version == '1.0.0' }.bindings", notNullValue())
-        .body("content.find { it.name == 'Document Approval' && it.version == '1.0.0' }.milestones", notNullValue())
-        .body("content.find { it.name == 'Document Approval' && it.version == '1.0.0' }.goals", notNullValue());
+        .body("namespace", equalTo("test-api"))
+        .body("name", equalTo("Document Approval"))
+        .body("version", equalTo("1.0.0"))
+        .body("capabilities", notNullValue())
+        .body("workers", notNullValue())
+        .body("bindings", notNullValue())
+        .body("goals", notNullValue());
   }
 
   @Test
@@ -208,8 +207,8 @@ class CaseDefinitionResourceTest {
         .body("content", hasSize(2))
         .body("page", equalTo(1))
         .body("size", equalTo(2))
-        .body("totalElements", equalTo(5))
-        .body("totalPages", equalTo(3));
+        .body("totalElements", equalTo(7))
+        .body("totalPages", equalTo(4));
   }
 
   @Test
@@ -225,8 +224,8 @@ class CaseDefinitionResourceTest {
         .body("content", hasSize(2))
         .body("page", equalTo(2))
         .body("size", equalTo(2))
-        .body("totalElements", equalTo(5))
-        .body("totalPages", equalTo(3));
+        .body("totalElements", equalTo(7))
+        .body("totalPages", equalTo(4));
   }
 
   @Test

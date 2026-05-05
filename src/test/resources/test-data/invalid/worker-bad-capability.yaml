@@ -1,0 +1,17 @@
+dsl: "0.1"
+version: "1.0.0"
+name: Worker Bad Capability
+namespace: test-invalid
+spec:
+  capabilities:
+    - name: validCapability
+      inputSchema: "{}"
+      outputSchema: "{}"
+  workers:
+    - name: broken-worker
+      capabilities:
+        - nonExistentCapability
+      do:
+        - setResult:
+            set:
+              done: true

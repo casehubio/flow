@@ -1,0 +1,55 @@
+dsl: "0.1"
+version: "2.0.0"
+name: Complete Test
+namespace: test-valid
+title: Complete test case with all features
+spec:
+  capabilities:
+    - name: validateData
+      description: Validate input data
+      inputSchema: "{ data: .data }"
+      outputSchema: "{ valid: .valid }"
+    - name: processData
+      description: Process validated data
+      inputSchema: "{ data: .data }"
+      outputSchema: "{ result: .result }"
+  workers:
+    - name: validator-worker
+      description: Validates data
+      capabilities:
+        - validateData
+      do:
+        - setResult:
+            set:
+              valid: true
+    - name: processor-worker
+      description: Processes data
+      capabilities:
+        - processData
+      do:
+        - setResult:
+            set:
+              result: "processed"
+  bindings:
+    - name: validate-on-start
+      capability: validateData
+      on:
+        contextChange:
+          filter: '.data != null'
+    - name: process-on-valid
+      capability: processData
+      on:
+        contextChange:
+          filter: '.valid == true'
+  goals:
+    - name: dataValidated
+      description: Data validation complete
+      condition: '.valid == true'
+    - name: dataProcessed
+      description: Data processing complete
+      condition: '.result == "processed"'
+  completion:
+    success:
+      allOf:
+        - dataValidated
+        - dataProcessed
