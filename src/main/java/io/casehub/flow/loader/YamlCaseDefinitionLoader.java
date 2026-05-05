@@ -15,6 +15,7 @@
  */
 package io.casehub.flow.loader;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.casehub.api.model.AllOfGoalExpression;
@@ -49,6 +50,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -118,12 +120,12 @@ public class YamlCaseDefinitionLoader {
                 .toList();
 
         for (Path yamlFile : yamlFiles) {
+          String relativePath = resourcePath + "/" + path.relativize(yamlFile);
           try {
-            String relativePath = resourcePath + "/" + path.relativize(yamlFile);
             loadAndRegister(relativePath);
             count++;
           } catch (Exception e) {
-            LOG.errorf(e, "Failed to load YAML definition from %s", yamlFile);
+            throw new RuntimeException("Failed to load YAML case definition from " + yamlFile, e);
           }
         }
       }
@@ -146,9 +148,22 @@ public class YamlCaseDefinitionLoader {
         return;
       }
 
-      io.casehub.model.CaseDefinition schema =
-          YAML_MAPPER.readValue(is, io.casehub.model.CaseDefinition.class);
-      CaseDefinition definition = convertToApiModel(schema);
+      io.casehub.model.CaseDefinition schema;
+      try {
+        schema = YAML_MAPPER.readValue(is, io.casehub.model.CaseDefinition.class);
+      } catch (JsonProcessingException e) {
+        throw new IllegalArgumentException(
+            "Malformed YAML in " + resourcePath + ": " + e.getOriginalMessage(), e);
+      }
+
+      // Build capability and goal maps for validation
+      Map<String, Capability> capabilityMap = new LinkedHashMap<>();
+      Map<String, Goal> goalMap = new LinkedHashMap<>();
+
+      CaseDefinition definition = convertToApiModel(schema, capabilityMap, goalMap);
+
+      // Validate structural integrity
+      validateStructure(definition, capabilityMap, goalMap, resourcePath);
 
       caseDefinitionRegistry
           .registerCaseDefinition(definition)
@@ -161,14 +176,14 @@ public class YamlCaseDefinitionLoader {
     }
   }
 
-  private CaseDefinition convertToApiModel(io.casehub.model.CaseDefinition schema) {
+  private CaseDefinition convertToApiModel(
+      io.casehub.model.CaseDefinition schema,
+      Map<String, Capability> capabilityMap,
+      Map<String, Goal> goalMap) {
     CaseDefinition def =
         new CaseDefinition(schema.getNamespace(), schema.getName(), schema.getVersion());
     def.setDsl(schema.getDsl());
     def.setTitle(schema.getTitle());
-
-    // Convert capabilities
-    Map<String, Capability> capabilityMap = new java.util.LinkedHashMap<>();
     if (schema.getSpec().getCapabilities() != null) {
       for (io.casehub.model.Capability sc : schema.getSpec().getCapabilities()) {
         Capability cap = new Capability(sc.getName(), sc.getInputSchema(), sc.getOutputSchema());
@@ -219,7 +234,6 @@ public class YamlCaseDefinitionLoader {
     }
 
     // Convert goals
-    Map<String, Goal> goalMap = new java.util.LinkedHashMap<>();
     if (schema.getSpec().getGoals() != null) {
       for (io.casehub.model.Goal sg : schema.getSpec().getGoals()) {
         Goal goal =
@@ -256,5 +270,74 @@ public class YamlCaseDefinitionLoader {
     }
 
     return null;
+  }
+
+  private void validateStructure(
+      CaseDefinition definition,
+      Map<String, Capability> capabilityMap,
+      Map<String, Goal> goalMap,
+      String resourcePath) {
+
+    // Validate workers reference existing capabilities
+    if (definition.getWorkers() != null) {
+      for (Worker worker : definition.getWorkers()) {
+        if (worker.getCapabilities() != null) {
+          for (int i = 0; i < worker.getCapabilities().size(); i++) {
+            Capability cap = worker.getCapabilities().get(i);
+            if (cap == null) {
+              throw new IllegalArgumentException(
+                  String.format(
+                      "Failed to load case definition from %s: Worker '%s' references capability at index %d which is not defined. Available capabilities: %s",
+                      resourcePath, worker.getName(), i, capabilityMap.keySet()));
+            }
+          }
+        }
+      }
+    }
+
+    // Validate bindings reference existing capabilities
+    if (definition.getBindings() != null) {
+      for (Binding binding : definition.getBindings()) {
+        if (binding.getCapability() == null) {
+          throw new IllegalArgumentException(
+              String.format(
+                  "Failed to load case definition from %s: Binding '%s' references a capability which is not defined. Available capabilities: %s",
+                  resourcePath, binding.getName(), capabilityMap.keySet()));
+        }
+      }
+    }
+
+    // Validate goal expressions reference existing goals
+    if (definition.getCompletion() != null
+        && definition.getCompletion() instanceof GoalBasedCompletion) {
+      GoalBasedCompletion completion = (GoalBasedCompletion) definition.getCompletion();
+      validateGoalExpression(completion.getSuccess(), goalMap, "success", resourcePath);
+      validateGoalExpression(completion.getFailure(), goalMap, "failure", resourcePath);
+    }
+  }
+
+  private void validateGoalExpression(
+      GoalExpression expr, Map<String, Goal> goalMap, String context, String resourcePath) {
+    if (expr == null) return;
+
+    java.util.Collection<Goal> goals = null;
+    if (expr instanceof AllOfGoalExpression) {
+      goals = ((AllOfGoalExpression) expr).getGoals();
+    } else if (expr instanceof AnyOfGoalExpression) {
+      goals = ((AnyOfGoalExpression) expr).getGoals();
+    }
+
+    if (goals != null) {
+      int index = 0;
+      for (Goal goal : goals) {
+        if (goal == null) {
+          throw new IllegalArgumentException(
+              String.format(
+                  "Failed to load case definition from %s: Completion %s expression references goal at index %d which is not defined. Available goals: %s",
+                  resourcePath, context, index, goalMap.keySet()));
+        }
+        index++;
+      }
+    }
   }
 }

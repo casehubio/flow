@@ -206,7 +206,8 @@ public class CaseHubClassPathLoader {
     } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
       LOG.errorf(e, "Failed to instantiate CaseHub class %s", className);
     } catch (RuntimeException e) {
-      LOG.errorf(e, "Failed to register CaseHub class %s", className);
+      throw new RuntimeException(
+          "Failed to register CaseHub class " + className + ": " + e.getMessage(), e);
     }
 
     return false;

@@ -1,0 +1,25 @@
+dsl: "0.1"
+version: "1.0.0"
+name: Goal Expression Bad Ref
+namespace: test-invalid
+spec:
+  capabilities:
+    - name: doSomething
+      inputSchema: "{}"
+      outputSchema: "{}"
+  workers:
+    - name: worker
+      capabilities:
+        - doSomething
+      do:
+        - setResult:
+            set:
+              done: true
+  goals:
+    - name: validGoal
+      condition: '.done == true'
+  completion:
+    success:
+      allOf:
+        - validGoal
+        - nonExistentGoal
