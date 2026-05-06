@@ -15,6 +15,7 @@
  */
 package io.casehub.flow.service;
 
+import io.casehub.api.engine.CaseHubRuntime;
 import io.casehub.engine.internal.model.CaseInstance;
 import io.casehub.engine.internal.model.CaseMetaModel;
 import io.casehub.engine.spi.CaseInstanceRepository;
@@ -44,6 +45,7 @@ public class CaseInstanceService {
 
   @Inject CaseDefinitionService definitionService;
   @Inject CaseInstanceRepository instanceRepository;
+  @Inject CaseHubRuntime caseHubRuntime;
 
   /**
    * Start a new case instance.
@@ -103,6 +105,31 @@ public class CaseInstanceService {
         .ifNull()
         .failWith(() -> new CaseInstanceNotFoundException(caseId))
         .map(this::toCaseInstanceResponse);
+  }
+
+  /**
+   * Get full case context.
+   *
+   * @param caseId case instance UUID
+   * @return case context data as map
+   */
+  @SuppressWarnings("unchecked")
+  public Uni<Map<String, Object>> getCaseContext(java.util.UUID caseId) {
+    return Uni.createFrom()
+        .completionStage(() -> caseHubRuntime.query(caseId, ".", Map.class))
+        .map(map -> (Map<String, Object>) map)
+        .onItem()
+        .ifNull()
+        .failWith(() -> new CaseInstanceNotFoundException(caseId))
+        .onFailure(RuntimeException.class)
+        .recoverWithUni(
+            ex -> {
+              if (ex.getMessage() != null && ex.getMessage().contains("not found")) {
+                return Uni.createFrom()
+                    .failure(new CaseInstanceNotFoundException(caseId));
+              }
+              return Uni.createFrom().failure(ex);
+            });
   }
 
   private CaseInstanceResponse toCaseInstanceResponse(CaseInstance instance) {
