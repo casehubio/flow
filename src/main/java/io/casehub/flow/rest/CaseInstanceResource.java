@@ -22,11 +22,14 @@ import io.casehub.flow.service.CaseInstanceService;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import java.util.UUID;
 
 /**
  * REST API for case instance lifecycle management.
@@ -87,6 +90,36 @@ public class CaseInstanceResource {
                             "Internal server error",
                             500,
                             "Failed to start case instance: " + ex.getMessage()))
+                    .build());
+  }
+
+  /**
+   * Get a case instance by ID.
+   *
+   * @param caseId case instance UUID
+   * @return 200 OK with case instance response, 404 if not found
+   */
+  @GET
+  @Path("/{caseId}")
+  public Uni<Response> getCaseInstance(@PathParam("caseId") UUID caseId) {
+    return caseInstanceService
+        .getCaseInstance(caseId)
+        .map(response -> Response.ok(response).build())
+        .onFailure(CaseInstanceNotFoundException.class)
+        .recoverWithItem(
+            ex ->
+                Response.status(404)
+                    .entity(
+                        new ProblemDetail(
+                            "Case instance not found", 404, ex.getMessage()))
+                    .build())
+        .onFailure()
+        .recoverWithItem(
+            ex ->
+                Response.status(500)
+                    .entity(
+                        new ProblemDetail(
+                            "Internal server error", 500, ex.getMessage()))
                     .build());
   }
 
