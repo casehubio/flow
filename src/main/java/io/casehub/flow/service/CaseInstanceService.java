@@ -132,6 +132,27 @@ public class CaseInstanceService {
             });
   }
 
+  /**
+   * Get a specific path in case context.
+   *
+   * @param caseId case instance UUID
+   * @param path dot-notation path to query (e.g., "customer.name")
+   * @return value at path, or null if path doesn't exist
+   */
+  public Uni<Object> getContextPath(java.util.UUID caseId, String path) {
+    return Uni.createFrom()
+        .completionStage(() -> caseHubRuntime.query(caseId, path, Object.class))
+        .onFailure(RuntimeException.class)
+        .recoverWithUni(
+            ex -> {
+              if (ex.getMessage() != null && ex.getMessage().contains("not found")) {
+                return Uni.createFrom()
+                    .failure(new CaseInstanceNotFoundException(caseId));
+              }
+              return Uni.createFrom().failure(ex);
+            });
+  }
+
   private CaseInstanceResponse toCaseInstanceResponse(CaseInstance instance) {
     CaseMetaModel meta = instance.getCaseMetaModel();
     return new CaseInstanceResponse(

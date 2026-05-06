@@ -155,4 +155,100 @@ class CaseInstanceServiceTest {
           assertThat(throwable.getMessage()).contains("No case instance found");
         });
   }
+
+  @Test
+  @RunOnVertxContext
+  void getCaseContext_returnsFullContext_whenExists(UniAsserter asserter) {
+    // Start a case with context
+    StartCaseRequest request =
+        new StartCaseRequest(
+            new CaseDefinitionRef("test-api", "Document Approval", "1.0.0"),
+            Map.of("documentId", "DOC-789", "submittedBy", "alice@example.com"));
+
+    asserter.execute(
+        () ->
+            service
+                .startCase(request)
+                .flatMap(
+                    startedCase ->
+                        service
+                            .getCaseContext(startedCase.caseId())
+                            .invoke(
+                                context -> {
+                                  assertThat(context).isNotNull();
+                                  assertThat(context).containsEntry("documentId", "DOC-789");
+                                  assertThat(context)
+                                      .containsEntry("submittedBy", "alice@example.com");
+                                })));
+  }
+
+  @Test
+  @RunOnVertxContext
+  void getCaseContext_throwsNotFoundException_whenNotFound(UniAsserter asserter) {
+    UUID nonExistentId = UUID.randomUUID();
+
+    asserter.assertFailedWith(
+        () -> service.getCaseContext(nonExistentId),
+        throwable -> {
+          assertThat(throwable).isInstanceOf(CaseInstanceNotFoundException.class);
+          assertThat(throwable.getMessage()).contains("No case instance found");
+        });
+  }
+
+  @Test
+  @RunOnVertxContext
+  void getContextPath_returnsValue_whenPathExists(UniAsserter asserter) {
+    // Start a case with context
+    StartCaseRequest request =
+        new StartCaseRequest(
+            new CaseDefinitionRef("test-api", "Document Approval", "1.0.0"),
+            Map.of("documentId", "DOC-999"));
+
+    asserter.execute(
+        () ->
+            service
+                .startCase(request)
+                .flatMap(
+                    startedCase ->
+                        service
+                            .getContextPath(startedCase.caseId(), "documentId")
+                            .invoke(
+                                value -> {
+                                  assertThat(value).isNotNull();
+                                  assertThat(value).isEqualTo("DOC-999");
+                                })));
+  }
+
+  @Test
+  @RunOnVertxContext
+  void getContextPath_returnsNull_whenPathDoesNotExist(UniAsserter asserter) {
+    // Start a case with context
+    StartCaseRequest request =
+        new StartCaseRequest(
+            new CaseDefinitionRef("test-api", "Document Approval", "1.0.0"),
+            Map.of("documentId", "DOC-111"));
+
+    asserter.execute(
+        () ->
+            service
+                .startCase(request)
+                .flatMap(
+                    startedCase ->
+                        service
+                            .getContextPath(startedCase.caseId(), "nonExistentField")
+                            .invoke(value -> assertThat(value).isNull())));
+  }
+
+  @Test
+  @RunOnVertxContext
+  void getContextPath_throwsNotFoundException_whenCaseNotFound(UniAsserter asserter) {
+    UUID nonExistentId = UUID.randomUUID();
+
+    asserter.assertFailedWith(
+        () -> service.getContextPath(nonExistentId, "anyPath"),
+        throwable -> {
+          assertThat(throwable).isInstanceOf(CaseInstanceNotFoundException.class);
+          assertThat(throwable.getMessage()).contains("No case instance found");
+        });
+  }
 }
