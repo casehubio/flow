@@ -22,6 +22,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
@@ -110,5 +111,54 @@ class CaseInstanceResourceTest {
         .contentType(ContentType.JSON)
         .body("title", equalTo("Invalid request"))
         .body("status", equalTo(400));
+  }
+
+  @Test
+  void getCaseInstance_returns200() {
+    // Start a case first
+    Map<String, Object> startRequest =
+        Map.of(
+            "definition",
+            Map.of("namespace", "test-api", "name", "Invoice Processing", "version", "1.0.0"),
+            "context",
+            Map.of("invoiceId", "INV-456"));
+
+    String caseId =
+        given()
+            .contentType(ContentType.JSON)
+            .body(startRequest)
+            .when()
+            .post("/api/v1/cases")
+            .then()
+            .statusCode(200)
+            .extract()
+            .path("caseId");
+
+    // Get the case instance
+    given()
+        .when()
+        .get("/api/v1/cases/{caseId}", caseId)
+        .then()
+        .statusCode(200)
+        .contentType(ContentType.JSON)
+        .body("caseId", equalTo(caseId))
+        .body("namespace", equalTo("test-api"))
+        .body("name", equalTo("Invoice Processing"))
+        .body("version", equalTo("1.0.0"))
+        .body("status", notNullValue());
+  }
+
+  @Test
+  void getCaseInstance_notFound_returns404() {
+    UUID nonExistentId = UUID.randomUUID();
+
+    given()
+        .when()
+        .get("/api/v1/cases/{caseId}", nonExistentId)
+        .then()
+        .statusCode(404)
+        .contentType(ContentType.JSON)
+        .body("title", equalTo("Case instance not found"))
+        .body("status", equalTo(404));
   }
 }
