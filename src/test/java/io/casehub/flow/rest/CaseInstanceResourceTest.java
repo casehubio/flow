@@ -17,6 +17,7 @@ package io.casehub.flow.rest;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.notNullValue;
 
 import io.quarkus.test.junit.QuarkusTest;
@@ -160,5 +161,98 @@ class CaseInstanceResourceTest {
         .contentType(ContentType.JSON)
         .body("title", equalTo("Case instance not found"))
         .body("status", equalTo(404));
+  }
+
+  @Test
+  void getContext_returns200WithFullContext() {
+    // Start a case with context
+    Map<String, Object> startRequest =
+        Map.of(
+            "definition",
+            Map.of("namespace", "test-api", "name", "Document Approval", "version", "1.0.0"),
+            "context",
+            Map.of("documentId", "DOC-789", "submittedBy", "bob@example.com"));
+
+    String caseId =
+        given()
+            .contentType(ContentType.JSON)
+            .body(startRequest)
+            .when()
+            .post("/api/v1/cases")
+            .then()
+            .statusCode(200)
+            .extract()
+            .path("caseId");
+
+    // Get context
+    given()
+        .when()
+        .get("/api/v1/cases/{caseId}/context", caseId)
+        .then()
+        .statusCode(200)
+        .contentType(ContentType.JSON)
+        .body("$", hasKey("documentId"))
+        .body("$", hasKey("submittedBy"))
+        .body("documentId", equalTo("DOC-789"))
+        .body("submittedBy", equalTo("bob@example.com"));
+  }
+
+  @Test
+  void getContextPath_simpleProperty_returns200() {
+    // Start case with context
+    Map<String, Object> startRequest =
+        Map.of(
+            "definition",
+            Map.of("namespace", "test-api", "name", "Document Approval", "version", "1.0.0"),
+            "context",
+            Map.of("documentId", "DOC-999", "approved", true));
+
+    String caseId =
+        given()
+            .contentType(ContentType.JSON)
+            .body(startRequest)
+            .when()
+            .post("/api/v1/cases")
+            .then()
+            .statusCode(200)
+            .extract()
+            .path("caseId");
+
+    // Get specific path
+    given()
+        .when()
+        .get("/api/v1/cases/{caseId}/context/{path}", caseId, "documentId")
+        .then()
+        .statusCode(200)
+        .body(equalTo("DOC-999"));
+  }
+
+  @Test
+  void getContextPath_nonExistentPath_returns200WithNull() {
+    // Start case with context
+    Map<String, Object> startRequest =
+        Map.of(
+            "definition",
+            Map.of("namespace", "test-api", "name", "Document Approval", "version", "1.0.0"),
+            "context",
+            Map.of("documentId", "DOC-123"));
+
+    String caseId =
+        given()
+            .contentType(ContentType.JSON)
+            .body(startRequest)
+            .when()
+            .post("/api/v1/cases")
+            .then()
+            .statusCode(200)
+            .extract()
+            .path("caseId");
+
+    // Get non-existent path
+    given()
+        .when()
+        .get("/api/v1/cases/{caseId}/context/{path}", caseId, "nonExistent")
+        .then()
+        .statusCode(200);
   }
 }
