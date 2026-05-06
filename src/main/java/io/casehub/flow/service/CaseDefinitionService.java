@@ -16,6 +16,7 @@
 package io.casehub.flow.service;
 
 import io.casehub.api.engine.CaseHub;
+import io.casehub.api.engine.CaseHubRuntime;
 import io.casehub.api.model.CaseDefinition;
 import io.casehub.engine.internal.model.CaseMetaModel;
 import io.casehub.engine.spi.CaseDefinitionRegistry;
@@ -59,7 +60,7 @@ public class CaseDefinitionService {
 
   @Inject CaseDefinitionRegistry caseDefinitionRegistry;
   @Inject Instance<CaseHub> caseHubs;
-  @Inject io.casehub.api.engine.CaseHubRuntime caseHubRuntime;
+  @Inject CaseHubRuntime caseHubRuntime;
   private final Map<DefinitionKey, CaseHub> caseHubIndex = new ConcurrentHashMap<>();
   private volatile boolean cdiIndexed = false;
 
@@ -80,6 +81,7 @@ public class CaseDefinitionService {
     }
   }
 
+  //TODO there must be a better aprouch than reflection to inject the runtime into the wrapper — maybe redesign CaseHub interface to separate definition from execution?
   private void injectRuntime(CaseHub hub) {
     try {
       Field runtimeField = CaseHub.class.getDeclaredField("runtime");

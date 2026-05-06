@@ -124,6 +124,67 @@ public class CaseInstanceResource {
   }
 
   /**
+   * Get full case context.
+   *
+   * @param caseId case instance UUID
+   * @return 200 OK with context map, 404 if case not found
+   */
+  @GET
+  @Path("/{caseId}/context")
+  public Uni<Response> getContext(@PathParam("caseId") UUID caseId) {
+    return caseInstanceService
+        .getCaseContext(caseId)
+        .map(context -> Response.ok(context).build())
+        .onFailure(CaseInstanceNotFoundException.class)
+        .recoverWithItem(
+            ex ->
+                Response.status(404)
+                    .entity(
+                        new ProblemDetail(
+                            "Case instance not found", 404, ex.getMessage()))
+                    .build())
+        .onFailure()
+        .recoverWithItem(
+            ex ->
+                Response.status(500)
+                    .entity(
+                        new ProblemDetail(
+                            "Internal server error", 500, ex.getMessage()))
+                    .build());
+  }
+
+  /**
+   * Get a specific path in case context.
+   *
+   * @param caseId case instance UUID
+   * @param path dot-notation path to query
+   * @return 200 OK with value at path, 404 if case not found
+   */
+  @GET
+  @Path("/{caseId}/context/{path}")
+  public Uni<Response> getContextPath(@PathParam("caseId") UUID caseId, @PathParam("path") String path) {
+    return caseInstanceService
+        .getContextPath(caseId, path)
+        .map(value -> Response.ok(value).build())
+        .onFailure(CaseInstanceNotFoundException.class)
+        .recoverWithItem(
+            ex ->
+                Response.status(404)
+                    .entity(
+                        new ProblemDetail(
+                            "Case instance not found", 404, ex.getMessage()))
+                    .build())
+        .onFailure()
+        .recoverWithItem(
+            ex ->
+                Response.status(500)
+                    .entity(
+                        new ProblemDetail(
+                            "Internal server error", 500, ex.getMessage()))
+                    .build());
+  }
+
+  /**
    * RFC 7807 Problem Details for HTTP APIs.
    *
    * @param title a short, human-readable summary of the problem type

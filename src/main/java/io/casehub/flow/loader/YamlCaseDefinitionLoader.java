@@ -185,7 +185,7 @@ public class YamlCaseDefinitionLoader {
     def.setDsl(schema.getDsl());
     def.setTitle(schema.getTitle());
     if (schema.getSpec().getCapabilities() != null) {
-      for (io.casehub.model.Capability sc : schema.getSpec().getCapabilities()) {
+      for (var sc : schema.getSpec().getCapabilities()) {
         Capability cap = new Capability(sc.getName(), sc.getInputSchema(), sc.getOutputSchema());
         cap.setDescription(sc.getDescription());
         capabilityMap.put(sc.getName(), cap);
