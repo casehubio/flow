@@ -15,9 +15,12 @@
  */
 package io.casehub.flow.rest;
 
+import io.casehub.api.engine.CaseHubRuntime;
 import io.casehub.flow.rest.dto.ProblemDetail;
 import io.casehub.flow.rest.dto.SendSignalRequest;
+import io.casehub.flow.rest.dto.SignalResponse;
 import io.smallrye.mutiny.Uni;
+import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
@@ -27,6 +30,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.UUID;
+import org.jboss.logging.Logger;
 
 /**
  * REST API for sending signals to case instances.
@@ -41,6 +45,10 @@ import java.util.UUID;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class SignalResource {
+
+  private static final Logger LOG = Logger.getLogger(SignalResource.class);
+
+  @Inject CaseHubRuntime caseHubRuntime;
 
   @POST
   public Uni<Response> sendSignal(
@@ -58,7 +66,13 @@ public class SignalResource {
                   .build());
     }
 
-    // Placeholder: actual signal processing will be added in later tasks
-    return Uni.createFrom().item(Response.status(202).build());
+    // Send signal to engine
+    return Uni.createFrom()
+        .item(
+            () -> {
+              caseHubRuntime.signal(caseId, request.path(), request.value());
+              return new SignalResponse(caseId, "accepted", "Signal queued for processing");
+            })
+        .map(response -> Response.status(202).entity(response).build());
   }
 }
