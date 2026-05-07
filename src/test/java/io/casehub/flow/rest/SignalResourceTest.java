@@ -131,4 +131,27 @@ class SignalResourceTest {
         .statusCode(404)
         .body("title", equalTo("Case not found"));
   }
+
+  @Test
+  void sendSignal_runtimeException_returns500() {
+    doThrow(new RuntimeException("Database error"))
+        .when(caseHubRuntime)
+        .signal(any(), any(), any());
+
+    given()
+        .contentType(ContentType.JSON)
+        .body(
+            """
+            {
+              "path": "test.path",
+              "value": "test"
+            }
+            """)
+        .when()
+        .post("/api/v1/cases/{caseId}/signals", UUID.randomUUID())
+        .then()
+        .statusCode(500)
+        .body("title", equalTo("Internal server error"))
+        .body("detail", containsString("Failed to send signal"));
+  }
 }
