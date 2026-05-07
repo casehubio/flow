@@ -20,8 +20,10 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import io.casehub.api.engine.CaseHubRuntime;
 import io.casehub.flow.exception.CaseInstanceNotFoundException;
@@ -29,6 +31,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.InjectMock;
 import io.restassured.http.ContentType;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
@@ -39,6 +42,10 @@ class SignalResourceTest {
   @Test
   void sendSignal_validRequest_returns202() {
     UUID caseId = UUID.randomUUID();
+
+    // Mock query to validate case exists
+    when(caseHubRuntime.query(eq(caseId), eq("."), eq(Object.class)))
+        .thenReturn(CompletableFuture.completedFuture(new Object()));
 
     given()
         .contentType(ContentType.JSON)
@@ -114,7 +121,7 @@ class SignalResourceTest {
     UUID caseId = UUID.randomUUID();
     doThrow(new CaseInstanceNotFoundException(caseId))
         .when(caseHubRuntime)
-        .signal(any(), any(), any());
+        .query(eq(caseId), eq("."), eq(Object.class));
 
     given()
         .contentType(ContentType.JSON)
@@ -134,9 +141,10 @@ class SignalResourceTest {
 
   @Test
   void sendSignal_runtimeException_returns500() {
+    UUID caseId = UUID.randomUUID();
     doThrow(new RuntimeException("Database error"))
         .when(caseHubRuntime)
-        .signal(any(), any(), any());
+        .query(eq(caseId), eq("."), eq(Object.class));
 
     given()
         .contentType(ContentType.JSON)
@@ -148,7 +156,7 @@ class SignalResourceTest {
             }
             """)
         .when()
-        .post("/api/v1/cases/{caseId}/signals", UUID.randomUUID())
+        .post("/api/v1/cases/{caseId}/signals", caseId)
         .then()
         .statusCode(500)
         .body("title", equalTo("Internal server error"))

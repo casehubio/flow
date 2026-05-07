@@ -67,10 +67,11 @@ public class SignalResource {
                   .build());
     }
 
-    // Send signal to engine
+    // Validate case exists and send signal
     return Uni.createFrom()
-        .item(
-            () -> {
+        .completionStage(() -> caseHubRuntime.query(caseId, ".", Object.class))
+        .map(
+            ignored -> {
               caseHubRuntime.signal(caseId, request.path(), request.value());
               return new SignalResponse(caseId, "accepted", "Signal queued for processing");
             })
@@ -83,18 +84,32 @@ public class SignalResource {
                   .entity(new ProblemDetail("Case not found", 404, ex.getMessage()))
                   .build();
             })
-        .onFailure()
-        .recoverWithItem(
+        .onFailure(RuntimeException.class)
+        .recoverWithUni(
             ex -> {
+              if (ex.getMessage() != null && ex.getMessage().contains("not found")) {
+                LOG.warnf(ex, "Case not found: %s", caseId);
+                return Uni.createFrom()
+                    .item(
+                        Response.status(404)
+                            .entity(
+                                new ProblemDetail(
+                                    "Case not found",
+                                    404,
+                                    ex.getMessage()))
+                            .build());
+              }
               LOG.errorf(
                   ex, "Failed to send signal to case %s at path %s", caseId, request.path());
-              return Response.status(500)
-                  .entity(
-                      new ProblemDetail(
-                          "Internal server error",
-                          500,
-                          "Failed to send signal: " + ex.getMessage()))
-                  .build();
+              return Uni.createFrom()
+                  .item(
+                      Response.status(500)
+                          .entity(
+                              new ProblemDetail(
+                                  "Internal server error",
+                                  500,
+                                  "Failed to send signal: " + ex.getMessage()))
+                          .build());
             });
   }
 }
