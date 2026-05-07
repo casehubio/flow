@@ -16,6 +16,7 @@
 package io.casehub.flow.rest;
 
 import io.casehub.api.engine.CaseHubRuntime;
+import io.casehub.flow.exception.CaseInstanceNotFoundException;
 import io.casehub.flow.rest.dto.ProblemDetail;
 import io.casehub.flow.rest.dto.SendSignalRequest;
 import io.casehub.flow.rest.dto.SignalResponse;
@@ -73,6 +74,14 @@ public class SignalResource {
               caseHubRuntime.signal(caseId, request.path(), request.value());
               return new SignalResponse(caseId, "accepted", "Signal queued for processing");
             })
-        .map(response -> Response.status(202).entity(response).build());
+        .map(response -> Response.status(202).entity(response).build())
+        .onFailure(CaseInstanceNotFoundException.class)
+        .recoverWithItem(
+            ex -> {
+              LOG.warnf(ex, "Case not found: %s", caseId);
+              return Response.status(404)
+                  .entity(new ProblemDetail("Case not found", 404, ex.getMessage()))
+                  .build();
+            });
   }
 }
