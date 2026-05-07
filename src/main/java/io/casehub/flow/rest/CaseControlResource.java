@@ -66,14 +66,13 @@ public class CaseControlResource {
         .emitter(
             em -> {
               try {
+                if (request != null && request.reason() != null) {
+                  LOG.infof("Suspending case %s, reason: %s", caseId, request.reason());
+                }
                 caseHubRuntime.suspendCase(caseId);
                 em.complete(
                     new CaseControlResponse(
                         caseId, "suspend", "accepted", "Case suspension queued for processing"));
-              } catch (IllegalArgumentException e) {
-                em.fail(e);
-              } catch (IllegalStateException e) {
-                em.fail(e);
               } catch (Exception e) {
                 em.fail(e);
               }
