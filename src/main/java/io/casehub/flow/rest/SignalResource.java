@@ -82,6 +82,19 @@ public class SignalResource {
               return Response.status(404)
                   .entity(new ProblemDetail("Case not found", 404, ex.getMessage()))
                   .build();
+            })
+        .onFailure()
+        .recoverWithItem(
+            ex -> {
+              LOG.errorf(
+                  ex, "Failed to send signal to case %s at path %s", caseId, request.path());
+              return Response.status(500)
+                  .entity(
+                      new ProblemDetail(
+                          "Internal server error",
+                          500,
+                          "Failed to send signal: " + ex.getMessage()))
+                  .build();
             });
   }
 }
