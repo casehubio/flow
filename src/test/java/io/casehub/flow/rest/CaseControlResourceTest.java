@@ -205,4 +205,90 @@ class CaseControlResourceTest {
 
     verify(caseHubRuntime).resumeCase(caseId);
   }
+
+  @Test
+  void testCancelWithNullRequestBody() {
+    UUID caseId = UUID.randomUUID();
+
+    given()
+        .contentType(ContentType.JSON)
+        .when()
+        .post("/api/v1/cases/" + caseId + "/cancel")
+        .then()
+        .statusCode(202)
+        .body("caseId", is(caseId.toString()))
+        .body("operation", is("cancel"))
+        .body("status", is("accepted"))
+        .body("message", is("Case cancellation queued for processing"));
+
+    verify(caseHubRuntime).cancelCase(caseId);
+  }
+
+  @Test
+  void testCancelCaseNotFound() {
+    UUID caseId = UUID.randomUUID();
+    doThrow(new IllegalArgumentException("Case not found"))
+        .when(caseHubRuntime)
+        .cancelCase(caseId);
+
+    given()
+        .contentType(ContentType.JSON)
+        .when()
+        .post("/api/v1/cases/{caseId}/cancel", caseId)
+        .then()
+        .statusCode(404)
+        .body("title", is("Case not found"))
+        .body("status", is(404));
+  }
+
+  @Test
+  void testCancelInvalidState() {
+    UUID caseId = UUID.randomUUID();
+    doThrow(new IllegalStateException("Cannot cancel case in CANCELLED state"))
+        .when(caseHubRuntime)
+        .cancelCase(caseId);
+
+    given()
+        .contentType(ContentType.JSON)
+        .when()
+        .post("/api/v1/cases/{caseId}/cancel", caseId)
+        .then()
+        .statusCode(409)
+        .body("title", is("Invalid state transition"))
+        .body("status", is(409))
+        .body("detail", is("Cannot cancel case in CANCELLED state"));
+  }
+
+  @Test
+  void testCancelRuntimeException() {
+    UUID caseId = UUID.randomUUID();
+    doThrow(new RuntimeException("Unexpected error")).when(caseHubRuntime).cancelCase(caseId);
+
+    given()
+        .contentType(ContentType.JSON)
+        .when()
+        .post("/api/v1/cases/{caseId}/cancel", caseId)
+        .then()
+        .statusCode(500)
+        .body("title", is("Internal server error"))
+        .body("status", is(500));
+  }
+
+  @Test
+  void testCancelWithReason() {
+    UUID caseId = UUID.randomUUID();
+
+    given()
+        .contentType(ContentType.JSON)
+        .body("{\"reason\": \"Business requirement changed\"}")
+        .when()
+        .post("/api/v1/cases/{caseId}/cancel", caseId)
+        .then()
+        .statusCode(202)
+        .body("caseId", is(caseId.toString()))
+        .body("operation", is("cancel"))
+        .body("status", is("accepted"));
+
+    verify(caseHubRuntime).cancelCase(caseId);
+  }
 }

@@ -163,4 +163,60 @@ public class CaseControlResource {
                   .build();
             });
   }
+
+  /**
+   * Cancel case execution.
+   *
+   * @param caseId case instance UUID
+   * @param request optional request with reason field
+   * @return 202 Accepted with operation confirmation, 404 if case not found, 409 if invalid state
+   */
+  @POST
+  @Path("cancel")
+  public Uni<Response> cancel(@PathParam("caseId") UUID caseId, CaseControlRequest request) {
+    return Uni.createFrom()
+        .emitter(
+            em -> {
+              try {
+                if (request != null && request.reason() != null) {
+                  LOG.infof("Cancelling case %s, reason: %s", caseId, request.reason());
+                }
+                caseHubRuntime.cancelCase(caseId);
+                em.complete(
+                    new CaseControlResponse(
+                        caseId, "cancel", "accepted", "Case cancellation queued for processing"));
+              } catch (Exception e) {
+                em.fail(e);
+              }
+            })
+        .map(response -> Response.status(202).entity(response).build())
+        .onFailure(IllegalArgumentException.class)
+        .recoverWithItem(
+            ex -> {
+              LOG.warnf(ex, "Case not found: %s", caseId);
+              return Response.status(404)
+                  .entity(new ProblemDetail("Case not found", 404, ex.getMessage()))
+                  .build();
+            })
+        .onFailure(IllegalStateException.class)
+        .recoverWithItem(
+            ex -> {
+              LOG.warnf(ex, "Invalid state transition for case %s", caseId);
+              return Response.status(409)
+                  .entity(new ProblemDetail("Invalid state transition", 409, ex.getMessage()))
+                  .build();
+            })
+        .onFailure()
+        .recoverWithItem(
+            ex -> {
+              LOG.errorf(ex, "Failed to cancel case %s", caseId);
+              return Response.status(500)
+                  .entity(
+                      new ProblemDetail(
+                          "Internal server error",
+                          500,
+                          "Failed to cancel case: " + ex.getMessage()))
+                  .build();
+            });
+  }
 }
