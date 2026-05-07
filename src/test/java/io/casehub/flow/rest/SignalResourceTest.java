@@ -56,4 +56,22 @@ class SignalResourceTest {
         .body("title", equalTo("Invalid request"))
         .body("status", equalTo(400));
   }
+
+  @Test
+  void sendSignal_nullValue_returns400() {
+    given()
+        .contentType(ContentType.JSON)
+        .body(
+            """
+            {
+              "path": "approvals.user",
+              "value": null
+            }
+            """)
+        .when()
+        .post("/api/v1/cases/{caseId}/signals", UUID.randomUUID())
+        .then()
+        .statusCode(400)
+        .body("title", equalTo("Invalid request"));
+  }
 }
