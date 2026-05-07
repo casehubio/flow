@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.casehub.flow.rest;
+package io.casehub.flow.rest.validation;
 
 import io.casehub.flow.rest.dto.ProblemDetail;
 import jakarta.validation.ConstraintViolationException;
