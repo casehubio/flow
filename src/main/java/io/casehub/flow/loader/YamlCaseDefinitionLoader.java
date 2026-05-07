@@ -32,7 +32,7 @@ import io.casehub.api.model.Milestone;
 import io.casehub.api.model.Trigger;
 import io.casehub.api.model.Worker;
 import io.casehub.api.model.evaluator.JQExpressionEvaluator;
-import io.casehub.engine.spi.CaseDefinitionRegistry;
+import io.casehub.engine.common.spi.CaseDefinitionRegistry;
 import io.casehub.model.CaseCompletion;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -215,7 +215,11 @@ public class YamlCaseDefinitionLoader {
               new ContextChangeTrigger(
                   new JQExpressionEvaluator(sr.getOn().getContextChange().getFilter()));
         }
-        Binding rule = new Binding(sr.getName(), cap, trigger);
+        Binding rule = Binding.builder()
+                .name(sr.getName())
+                .capability(cap)
+                .on(trigger)
+                .build();
         def.getBindings().add(rule);
       }
     }
@@ -298,7 +302,7 @@ public class YamlCaseDefinitionLoader {
     // Validate bindings reference existing capabilities
     if (definition.getBindings() != null) {
       for (Binding binding : definition.getBindings()) {
-        if (binding.getCapability() == null) {
+        if (binding.target() == null) {
           throw new IllegalArgumentException(
               String.format(
                   "Failed to load case definition from %s: Binding '%s' references a capability which is not defined. Available capabilities: %s",

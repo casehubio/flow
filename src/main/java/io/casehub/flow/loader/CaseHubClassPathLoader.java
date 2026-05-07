@@ -17,7 +17,7 @@ package io.casehub.flow.loader;
 
 import io.casehub.api.engine.CaseHub;
 import io.casehub.api.model.CaseDefinition;
-import io.casehub.engine.spi.CaseDefinitionRegistry;
+import io.casehub.engine.common.spi.CaseDefinitionRegistry;
 import io.quarkus.arc.Arc;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.annotation.Priority;
