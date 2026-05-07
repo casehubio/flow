@@ -18,14 +18,21 @@ package io.casehub.flow.rest;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 
+import io.casehub.api.engine.CaseHubRuntime;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.InjectMock;
 import io.restassured.http.ContentType;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
 class SignalResourceTest {
+
+  @InjectMock CaseHubRuntime caseHubRuntime;
 
   @Test
   void sendSignal_validRequest_returns202() {
@@ -47,6 +54,8 @@ class SignalResourceTest {
         .body("caseId", equalTo(caseId.toString()))
         .body("status", equalTo("accepted"))
         .body("message", containsString("queued"));
+
+    verify(caseHubRuntime).signal(eq(caseId), eq("approvals.user"), any());
   }
 
   @Test
