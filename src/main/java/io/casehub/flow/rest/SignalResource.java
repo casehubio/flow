@@ -15,8 +15,10 @@
  */
 package io.casehub.flow.rest;
 
+import io.casehub.flow.rest.dto.ProblemDetail;
 import io.casehub.flow.rest.dto.SendSignalRequest;
 import io.smallrye.mutiny.Uni;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -42,9 +44,9 @@ public class SignalResource {
 
   @POST
   public Uni<Response> sendSignal(
-      @PathParam("caseId") UUID caseId, SendSignalRequest request) {
+      @PathParam("caseId") UUID caseId, @Valid SendSignalRequest request) {
 
-    if (request == null || request.path() == null || request.value() == null) {
+    if (request == null) {
       return Uni.createFrom()
           .item(
               Response.status(400)
@@ -52,19 +54,11 @@ public class SignalResource {
                       new ProblemDetail(
                           "Invalid request",
                           400,
-                          "Request body, path, and value are required"))
+                          "Request body is required"))
                   .build());
     }
 
+    // Placeholder: actual signal processing will be added in later tasks
     return Uni.createFrom().item(Response.status(202).build());
   }
-
-  /**
-   * RFC 7807 Problem Details for HTTP APIs.
-   *
-   * @param title a short, human-readable summary of the problem type
-   * @param status the HTTP status code
-   * @param detail a human-readable explanation specific to this occurrence
-   */
-  public record ProblemDetail(String title, int status, String detail) {}
 }
