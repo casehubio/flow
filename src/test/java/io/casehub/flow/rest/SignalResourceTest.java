@@ -20,9 +20,11 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
 import io.casehub.api.engine.CaseHubRuntime;
+import io.casehub.flow.exception.CaseInstanceNotFoundException;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.InjectMock;
 import io.restassured.http.ContentType;
@@ -105,5 +107,28 @@ class SignalResourceTest {
         .then()
         .statusCode(400)
         .body("title", equalTo("Invalid request"));
+  }
+
+  @Test
+  void sendSignal_caseNotFound_returns404() {
+    UUID caseId = UUID.randomUUID();
+    doThrow(new CaseInstanceNotFoundException(caseId))
+        .when(caseHubRuntime)
+        .signal(any(), any(), any());
+
+    given()
+        .contentType(ContentType.JSON)
+        .body(
+            """
+            {
+              "path": "test.path",
+              "value": "test"
+            }
+            """)
+        .when()
+        .post("/api/v1/cases/{caseId}/signals", caseId)
+        .then()
+        .statusCode(404)
+        .body("title", equalTo("Case not found"));
   }
 }
