@@ -119,4 +119,90 @@ class CaseControlResourceTest {
 
     verify(caseHubRuntime).suspendCase(caseId);
   }
+
+  @Test
+  void testResumeWithNullRequestBody() {
+    UUID caseId = UUID.randomUUID();
+
+    given()
+        .contentType(ContentType.JSON)
+        .when()
+        .post("/api/v1/cases/" + caseId + "/resume")
+        .then()
+        .statusCode(202)
+        .body("caseId", is(caseId.toString()))
+        .body("operation", is("resume"))
+        .body("status", is("accepted"))
+        .body("message", is("Case resumption queued for processing"));
+
+    verify(caseHubRuntime).resumeCase(caseId);
+  }
+
+  @Test
+  void testResumeCaseNotFound() {
+    UUID caseId = UUID.randomUUID();
+    doThrow(new IllegalArgumentException("Case not found"))
+        .when(caseHubRuntime)
+        .resumeCase(caseId);
+
+    given()
+        .contentType(ContentType.JSON)
+        .when()
+        .post("/api/v1/cases/{caseId}/resume", caseId)
+        .then()
+        .statusCode(404)
+        .body("title", is("Case not found"))
+        .body("status", is(404));
+  }
+
+  @Test
+  void testResumeInvalidState() {
+    UUID caseId = UUID.randomUUID();
+    doThrow(new IllegalStateException("Cannot resume case in RUNNING state"))
+        .when(caseHubRuntime)
+        .resumeCase(caseId);
+
+    given()
+        .contentType(ContentType.JSON)
+        .when()
+        .post("/api/v1/cases/{caseId}/resume", caseId)
+        .then()
+        .statusCode(409)
+        .body("title", is("Invalid state transition"))
+        .body("status", is(409))
+        .body("detail", is("Cannot resume case in RUNNING state"));
+  }
+
+  @Test
+  void testResumeRuntimeException() {
+    UUID caseId = UUID.randomUUID();
+    doThrow(new RuntimeException("Unexpected error")).when(caseHubRuntime).resumeCase(caseId);
+
+    given()
+        .contentType(ContentType.JSON)
+        .when()
+        .post("/api/v1/cases/{caseId}/resume", caseId)
+        .then()
+        .statusCode(500)
+        .body("title", is("Internal server error"))
+        .body("status", is(500));
+  }
+
+  @Test
+  void testResumeWithReason() {
+    UUID caseId = UUID.randomUUID();
+
+    given()
+        .contentType(ContentType.JSON)
+        .body("{\"reason\": \"Maintenance complete\"}")
+        .when()
+        .post("/api/v1/cases/{caseId}/resume", caseId)
+        .then()
+        .statusCode(202)
+        .body("caseId", is(caseId.toString()))
+        .body("operation", is("resume"))
+        .body("status", is("accepted"));
+
+    verify(caseHubRuntime).resumeCase(caseId);
+  }
 }
