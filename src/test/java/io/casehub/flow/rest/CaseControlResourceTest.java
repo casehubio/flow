@@ -17,6 +17,7 @@ package io.casehub.flow.rest;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.is;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
 import io.casehub.api.engine.CaseHubRuntime;
@@ -47,5 +48,22 @@ class CaseControlResourceTest {
         .body("message", is("Case suspension queued for processing"));
 
     verify(caseHubRuntime).suspendCase(caseId);
+  }
+
+  @Test
+  void testSuspendCaseNotFound() {
+    UUID caseId = UUID.randomUUID();
+    doThrow(new IllegalArgumentException("Case not found"))
+        .when(caseHubRuntime)
+        .suspendCase(caseId);
+
+    given()
+        .contentType(ContentType.JSON)
+        .when()
+        .post("/api/v1/cases/{caseId}/suspend", caseId)
+        .then()
+        .statusCode(404)
+        .body("title", is("Case not found"))
+        .body("status", is(404));
   }
 }
