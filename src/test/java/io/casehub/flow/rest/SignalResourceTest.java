@@ -16,6 +16,7 @@
 package io.casehub.flow.rest;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 
 import io.quarkus.test.junit.QuarkusTest;
@@ -25,6 +26,28 @@ import org.junit.jupiter.api.Test;
 
 @QuarkusTest
 class SignalResourceTest {
+
+  @Test
+  void sendSignal_validRequest_returns202() {
+    UUID caseId = UUID.randomUUID();
+
+    given()
+        .contentType(ContentType.JSON)
+        .body(
+            """
+            {
+              "path": "approvals.user",
+              "value": {"approved": true}
+            }
+            """)
+        .when()
+        .post("/api/v1/cases/{caseId}/signals", caseId)
+        .then()
+        .statusCode(202)
+        .body("caseId", equalTo(caseId.toString()))
+        .body("status", equalTo("accepted"))
+        .body("message", containsString("queued"));
+  }
 
   @Test
   void sendSignal_nullRequestBody_returns400() {
