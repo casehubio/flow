@@ -17,6 +17,7 @@ package io.casehub.flow.rest;
 
 import io.casehub.flow.exception.CaseInstanceNotFoundException;
 import io.casehub.flow.exception.DefinitionNotFoundException;
+import io.casehub.flow.rest.dto.ProblemDetail;
 import io.casehub.flow.rest.dto.StartCaseRequest;
 import io.casehub.flow.service.CaseInstanceService;
 import io.smallrye.mutiny.Uni;
@@ -183,13 +184,4 @@ public class CaseInstanceResource {
                             "Internal server error", 500, ex.getMessage()))
                     .build());
   }
-
-  /**
-   * RFC 7807 Problem Details for HTTP APIs.
-   *
-   * @param title a short, human-readable summary of the problem type
-   * @param status the HTTP status code
-   * @param detail a human-readable explanation specific to this occurrence
-   */
-  public record ProblemDetail(String title, int status, String detail) {}
 }
