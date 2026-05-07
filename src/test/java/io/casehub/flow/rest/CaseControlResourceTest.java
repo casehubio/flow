@@ -66,4 +66,57 @@ class CaseControlResourceTest {
         .body("title", is("Case not found"))
         .body("status", is(404));
   }
+
+  @Test
+  void testSuspendInvalidState() {
+    UUID caseId = UUID.randomUUID();
+    doThrow(new IllegalStateException("Cannot suspend case in SUSPENDED state"))
+        .when(caseHubRuntime)
+        .suspendCase(caseId);
+
+    given()
+        .contentType(ContentType.JSON)
+        .when()
+        .post("/api/v1/cases/{caseId}/suspend", caseId)
+        .then()
+        .statusCode(409)
+        .body("title", is("Invalid state transition"))
+        .body("status", is(409))
+        .body("detail", is("Cannot suspend case in SUSPENDED state"));
+  }
+
+  @Test
+  void testSuspendRuntimeException() {
+    UUID caseId = UUID.randomUUID();
+    doThrow(new RuntimeException("Unexpected error"))
+        .when(caseHubRuntime)
+        .suspendCase(caseId);
+
+    given()
+        .contentType(ContentType.JSON)
+        .when()
+        .post("/api/v1/cases/{caseId}/suspend", caseId)
+        .then()
+        .statusCode(500)
+        .body("title", is("Internal server error"))
+        .body("status", is(500));
+  }
+
+  @Test
+  void testSuspendWithReason() {
+    UUID caseId = UUID.randomUUID();
+
+    given()
+        .contentType(ContentType.JSON)
+        .body("{\"reason\": \"Maintenance window\"}")
+        .when()
+        .post("/api/v1/cases/{caseId}/suspend", caseId)
+        .then()
+        .statusCode(202)
+        .body("caseId", is(caseId.toString()))
+        .body("operation", is("suspend"))
+        .body("status", is("accepted"));
+
+    verify(caseHubRuntime).suspendCase(caseId);
+  }
 }
