@@ -55,4 +55,195 @@ class CaseControlResourceIT {
         .extract()
         .path("status");
   }
+
+  @Test
+  void testSuspendNonExistentCase() {
+    UUID randomCaseId = UUID.randomUUID();
+
+    given()
+        .contentType("application/json")
+        .body("{}")
+        .when()
+        .post("/api/v1/cases/{caseId}/suspend", randomCaseId)
+        .then()
+        .statusCode(404);
+  }
+
+  @Test
+  void testSuspendRunningCase() {
+    UUID caseId = startTestCase();
+
+    given()
+        .contentType("application/json")
+        .body("{}")
+        .when()
+        .post("/api/v1/cases/{caseId}/suspend", caseId)
+        .then()
+        .statusCode(202);
+
+    await()
+        .atMost(5, SECONDS)
+        .untilAsserted(
+            () -> {
+              String status = getCaseStatus(caseId);
+              assert status.equals("SUSPENDED") || status.equals("WAITING");
+            });
+  }
+
+  @Test
+  void testResumeSuspendedCase() {
+    UUID caseId = startTestCase();
+
+    given()
+        .contentType("application/json")
+        .body("{}")
+        .when()
+        .post("/api/v1/cases/{caseId}/suspend", caseId)
+        .then()
+        .statusCode(202);
+
+    await()
+        .atMost(5, SECONDS)
+        .untilAsserted(
+            () -> {
+              String status = getCaseStatus(caseId);
+              assert status.equals("SUSPENDED");
+            });
+
+    given()
+        .contentType("application/json")
+        .body("{}")
+        .when()
+        .post("/api/v1/cases/{caseId}/resume", caseId)
+        .then()
+        .statusCode(202);
+
+    await()
+        .atMost(5, SECONDS)
+        .untilAsserted(
+            () -> {
+              String status = getCaseStatus(caseId);
+              assert status.equals("RUNNING");
+            });
+  }
+
+  @Test
+  void testResumeNonSuspendedCase() {
+    UUID caseId = startTestCase();
+
+    given()
+        .contentType("application/json")
+        .body("{}")
+        .when()
+        .post("/api/v1/cases/{caseId}/resume", caseId)
+        .then()
+        .statusCode(409);
+  }
+
+  @Test
+  void testSuspendAlreadySuspendedCase() {
+    UUID caseId = startTestCase();
+
+    given()
+        .contentType("application/json")
+        .body("{}")
+        .when()
+        .post("/api/v1/cases/{caseId}/suspend", caseId)
+        .then()
+        .statusCode(202);
+
+    await()
+        .atMost(5, SECONDS)
+        .untilAsserted(
+            () -> {
+              String status = getCaseStatus(caseId);
+              assert status.equals("SUSPENDED");
+            });
+
+    given()
+        .contentType("application/json")
+        .body("{}")
+        .when()
+        .post("/api/v1/cases/{caseId}/suspend", caseId)
+        .then()
+        .statusCode(409);
+  }
+
+  @Test
+  void testCancelRunningCase() {
+    UUID caseId = startTestCase();
+
+    given()
+        .contentType("application/json")
+        .body("{}")
+        .when()
+        .post("/api/v1/cases/{caseId}/cancel", caseId)
+        .then()
+        .statusCode(202);
+
+    await()
+        .atMost(5, SECONDS)
+        .untilAsserted(
+            () -> {
+              String status = getCaseStatus(caseId);
+              assert status.equals("CANCELLED")
+                  || status.equals("FAULTED")
+                  || status.equals("COMPLETED");
+            });
+  }
+
+  @Test
+  void testFullWorkflow() {
+    UUID caseId = startTestCase();
+
+    given()
+        .contentType("application/json")
+        .body("{}")
+        .when()
+        .post("/api/v1/cases/{caseId}/suspend", caseId)
+        .then()
+        .statusCode(202);
+
+    await()
+        .atMost(5, SECONDS)
+        .untilAsserted(
+            () -> {
+              String status = getCaseStatus(caseId);
+              assert status.equals("SUSPENDED");
+            });
+
+    given()
+        .contentType("application/json")
+        .body("{}")
+        .when()
+        .post("/api/v1/cases/{caseId}/resume", caseId)
+        .then()
+        .statusCode(202);
+
+    await()
+        .atMost(5, SECONDS)
+        .untilAsserted(
+            () -> {
+              String status = getCaseStatus(caseId);
+              assert status.equals("RUNNING");
+            });
+
+    given()
+        .contentType("application/json")
+        .body("{}")
+        .when()
+        .post("/api/v1/cases/{caseId}/cancel", caseId)
+        .then()
+        .statusCode(202);
+
+    await()
+        .atMost(5, SECONDS)
+        .untilAsserted(
+            () -> {
+              String status = getCaseStatus(caseId);
+              assert status.equals("CANCELLED")
+                  || status.equals("FAULTED")
+                  || status.equals("COMPLETED");
+            });
+  }
 }
