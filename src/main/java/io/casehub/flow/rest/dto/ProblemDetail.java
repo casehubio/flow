@@ -13,19 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.casehub.flow.rest;
-
-import java.util.List;
+package io.casehub.flow.rest.dto;
 
 /**
- * Generic paginated response wrapper.
+ * RFC 7807 Problem Details for HTTP APIs.
  *
- * @param content the page content
- * @param page current page number (1-indexed)
- * @param size page size
- * @param totalElements total number of elements across all pages
- * @param totalPages total number of pages
- * @param <T> the type of elements in the page
+ * @param title a short, human-readable summary of the problem type
+ * @param status the HTTP status code
+ * @param detail a human-readable explanation specific to this occurrence
  */
-public record PagedResponse<T>(
-    List<T> content, int page, int size, long totalElements, int totalPages) {}
+public record ProblemDetail(String title, int status, String detail) {}

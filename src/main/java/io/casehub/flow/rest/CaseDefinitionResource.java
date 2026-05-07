@@ -16,6 +16,7 @@
 package io.casehub.flow.rest;
 
 import io.casehub.api.model.CaseDefinition;
+import io.casehub.flow.rest.dto.ProblemDetail;
 import io.casehub.flow.service.CaseDefinitionService;
 import io.smallrye.mutiny.Uni;
 import org.jboss.resteasy.reactive.RestQuery;
@@ -159,13 +160,4 @@ public class CaseDefinitionResource {
               return Response.ok(definition).build();
             });
   }
-
-  /**
-   * RFC 7807 Problem Detail for error responses.
-   *
-   * @param title short, human-readable summary
-   * @param status HTTP status code
-   * @param detail human-readable explanation specific to this occurrence
-   */
-  public record ProblemDetail(String title, int status, String detail) {}
 }
