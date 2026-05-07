@@ -15,10 +15,14 @@
  */
 package io.casehub.flow.rest.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
 /**
  * Request payload for sending signal to case instance.
  *
  * @param path dot-notation path in CaseContext (e.g., "approvals.user", "orders[0].status")
- * @param value signal data to set at path
+ * @param value signal data to set at path. Acceptable value types: String, Number, Boolean,
+ *     null, Map, List.
  */
-public record SendSignalRequest(String path, Object value) {}
+public record SendSignalRequest(@NotBlank String path, @NotNull Object value) {}
