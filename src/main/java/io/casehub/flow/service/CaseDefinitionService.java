@@ -20,7 +20,7 @@ import io.casehub.api.engine.CaseHubRuntime;
 import io.casehub.api.model.CaseDefinition;
 import io.casehub.engine.internal.model.CaseMetaModel;
 import io.casehub.engine.spi.CaseDefinitionRegistry;
-import io.casehub.flow.rest.PagedResponse;
+import io.casehub.flow.rest.dto.PagedResponse;
 import io.casehub.persistence.jpa.CaseMetaModelEntity;
 import io.quarkus.hibernate.reactive.panache.Panache;
 import io.quarkus.panache.common.Page;
