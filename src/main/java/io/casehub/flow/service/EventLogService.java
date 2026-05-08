@@ -15,11 +15,19 @@
  */
 package io.casehub.flow.service;
 
+import io.casehub.api.engine.CaseHubRuntime;
+import io.casehub.api.model.event.CaseEventLogRecord;
 import io.casehub.api.model.event.CaseHubEventType;
 import io.casehub.api.model.event.EventStreamType;
+import io.casehub.flow.rest.dto.EventLogEntryResponse;
+import io.casehub.flow.rest.dto.PagedResponse;
+import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
 /**
@@ -29,6 +37,90 @@ import java.util.stream.Collectors;
  */
 @ApplicationScoped
 public class EventLogService {
+
+  @Inject CaseHubRuntime caseHubRuntime;
+
+  /**
+   * Get paginated and filtered event log for a case.
+   *
+   * @param caseId case instance UUID
+   * @param page page number (1-indexed)
+   * @param size page size
+   * @param eventTypeNames optional event type filter
+   * @param streamTypeNames optional stream type filter
+   * @return paged response with event log entries
+   */
+  public Uni<PagedResponse<EventLogEntryResponse>> getEventLog(
+      UUID caseId,
+      int page,
+      int size,
+      List<String> eventTypeNames,
+      List<String> streamTypeNames) {
+
+    // Convert filter strings to enums
+    Set<CaseHubEventType> eventTypes = convertEventTypes(eventTypeNames);
+    Set<EventStreamType> streamTypes = convertStreamTypes(streamTypeNames);
+
+    // Choose appropriate runtime method based on filters
+    CompletionStage<List<CaseEventLogRecord>> eventLogFuture;
+    if (!eventTypes.isEmpty() && !streamTypes.isEmpty()) {
+      eventLogFuture = caseHubRuntime.eventLog(caseId, eventTypes, streamTypes);
+    } else if (!eventTypes.isEmpty()) {
+      eventLogFuture = caseHubRuntime.eventLog(caseId, eventTypes);
+    } else {
+      eventLogFuture = caseHubRuntime.eventLog(caseId);
+    }
+
+    return Uni.createFrom()
+        .completionStage(eventLogFuture)
+        .map(events -> buildPagedResponse(events, page, size));
+  }
+
+  /**
+   * Build paged response from event list.
+   *
+   * @param allEvents all events (after filtering)
+   * @param page page number (1-indexed)
+   * @param size page size
+   * @return paged response
+   */
+  private PagedResponse<EventLogEntryResponse> buildPagedResponse(
+      List<CaseEventLogRecord> allEvents, int page, int size) {
+
+    int totalElements = allEvents.size();
+    int totalPages = (totalElements + size - 1) / size;
+
+    // Calculate pagination bounds
+    int offset = (page - 1) * size;
+    int endIndex = Math.min(offset + size, totalElements);
+
+    // Handle out-of-bounds page (return empty)
+    List<EventLogEntryResponse> content;
+    if (offset >= totalElements) {
+      content = List.of();
+    } else {
+      content = allEvents.subList(offset, endIndex).stream()
+          .map(this::toEventLogEntryResponse)
+          .toList();
+    }
+
+    return new PagedResponse<>(content, page, size, totalElements, totalPages);
+  }
+
+  /**
+   * Map CaseEventLogRecord to EventLogEntryResponse.
+   *
+   * @param record event log record from engine
+   * @return response DTO
+   */
+  private EventLogEntryResponse toEventLogEntryResponse(CaseEventLogRecord record) {
+    return new EventLogEntryResponse(
+        record.eventType(),
+        record.streamType(),
+        record.timestamp(),
+        record.payload(),
+        record.metadata());
+  }
 
   /**
    * Convert string event type names to enum set.
