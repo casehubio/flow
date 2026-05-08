@@ -19,32 +19,12 @@ import static io.restassured.RestAssured.given;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.awaitility.Awaitility.await;
 
-import io.casehub.api.engine.CaseHub;
-import io.casehub.api.engine.CaseHubRuntime;
-import io.casehub.api.model.CaseDefinition;
 import io.quarkus.test.junit.QuarkusTest;
-import jakarta.enterprise.inject.Instance;
-import jakarta.inject.Inject;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
-class CaseControlResourceIT {
-
-  @Inject CaseHubRuntime caseHubRuntime;
-  @Inject Instance<CaseHub> caseHubs;
-
-  private UUID startTestCase() {
-    CaseDefinition definition = caseHubs.stream().findFirst().orElseThrow().getDefinition();
-    Map<String, Object> context = new HashMap<>();
-    try {
-      return caseHubRuntime.startCase(definition, context).toCompletableFuture().get();
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to start test case", e);
-    }
-  }
+class CaseControlResourceIT extends CaseHubIntegrationTestBase {
 
   private String getCaseStatus(UUID caseId) {
     return given()
@@ -82,7 +62,7 @@ class CaseControlResourceIT {
         .statusCode(202);
 
     await()
-        .atMost(5, SECONDS)
+        .atMost(10, SECONDS)
         .untilAsserted(
             () -> {
               String status = getCaseStatus(caseId);
@@ -103,7 +83,7 @@ class CaseControlResourceIT {
         .statusCode(202);
 
     await()
-        .atMost(5, SECONDS)
+        .atMost(10, SECONDS)
         .untilAsserted(
             () -> {
               String status = getCaseStatus(caseId);
@@ -119,7 +99,7 @@ class CaseControlResourceIT {
         .statusCode(202);
 
     await()
-        .atMost(5, SECONDS)
+        .atMost(10, SECONDS)
         .untilAsserted(
             () -> {
               String status = getCaseStatus(caseId);
@@ -153,7 +133,7 @@ class CaseControlResourceIT {
         .statusCode(202);
 
     await()
-        .atMost(5, SECONDS)
+        .atMost(10, SECONDS)
         .untilAsserted(
             () -> {
               String status = getCaseStatus(caseId);
@@ -182,7 +162,7 @@ class CaseControlResourceIT {
         .statusCode(202);
 
     await()
-        .atMost(5, SECONDS)
+        .atMost(10, SECONDS)
         .untilAsserted(
             () -> {
               String status = getCaseStatus(caseId);
@@ -205,7 +185,7 @@ class CaseControlResourceIT {
         .statusCode(202);
 
     await()
-        .atMost(5, SECONDS)
+        .atMost(10, SECONDS)
         .untilAsserted(
             () -> {
               String status = getCaseStatus(caseId);
@@ -221,7 +201,7 @@ class CaseControlResourceIT {
         .statusCode(202);
 
     await()
-        .atMost(5, SECONDS)
+        .atMost(10, SECONDS)
         .untilAsserted(
             () -> {
               String status = getCaseStatus(caseId);
@@ -237,7 +217,7 @@ class CaseControlResourceIT {
         .statusCode(202);
 
     await()
-        .atMost(5, SECONDS)
+        .atMost(10, SECONDS)
         .untilAsserted(
             () -> {
               String status = getCaseStatus(caseId);

@@ -17,6 +17,9 @@ package io.casehub.flow.rest;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.notNullValue;
 
 import io.quarkus.test.junit.QuarkusTest;
@@ -25,7 +28,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
-class EventLogResourceIT {
+class EventLogResourceIT extends CaseHubIntegrationTestBase {
 
   @Test
   void getEventLog_nonExistentCase_returns404() {
@@ -136,5 +139,44 @@ class EventLogResourceIT {
         .body("title", equalTo("Invalid pagination parameters"))
         .body("status", equalTo(400))
         .body("detail", notNullValue());
+  }
+
+  @Test
+  void getEventLog_defaultPagination_returnsEvents() {
+    UUID caseId = startTestCase();
+    waitForEvents(caseId);
+
+    given()
+        .when()
+        .get("/api/v1/cases/{caseId}/events", caseId)
+        .then()
+        .statusCode(200)
+        .body("page", equalTo(1))
+        .body("size", equalTo(50))
+        .body("totalElements", greaterThan(0))
+        .body("content", hasSize(greaterThan(0)))
+        .body("content[0].eventType", notNullValue())
+        .body("content[0].streamType", notNullValue())
+        .body("content[0].timestamp", notNullValue());
+  }
+
+  @Test
+  void getEventLog_customPagination_returnsCorrectPage() {
+    UUID caseId = startTestCase();
+    waitForEvents(caseId);
+
+    given()
+        .queryParam("page", 1)
+        .queryParam("size", 5)
+        .when()
+        .get("/api/v1/cases/{caseId}/events", caseId)
+        .then()
+        .statusCode(200)
+        .body("page", equalTo(1))
+        .body("size", equalTo(5))
+        .body("content.size()", lessThanOrEqualTo(5))
+        .body("content[0].eventType", notNullValue())
+        .body("content[0].streamType", notNullValue())
+        .body("content[0].timestamp", notNullValue());
   }
 }
