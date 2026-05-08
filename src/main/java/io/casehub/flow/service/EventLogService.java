@@ -67,6 +67,11 @@ public class EventLogService {
       eventLogFuture = caseHubRuntime.eventLog(caseId, eventTypes, streamTypes);
     } else if (!eventTypes.isEmpty()) {
       eventLogFuture = caseHubRuntime.eventLog(caseId, eventTypes);
+    } else if (!streamTypes.isEmpty()) {
+      // Engine supports streamType in combination with eventType, but not alone
+      // Fetch all and filter in-memory
+      eventLogFuture = caseHubRuntime.eventLog(caseId)
+          .thenApply(events -> filterByStreamType(events, streamTypes));
     } else {
       eventLogFuture = caseHubRuntime.eventLog(caseId);
     }
@@ -152,5 +157,19 @@ public class EventLogService {
     return streamTypeNames.stream()
         .map(name -> EventStreamType.valueOf(name))
         .collect(Collectors.toSet());
+  }
+
+  /**
+   * Filter event log records by stream type.
+   *
+   * @param events list of event log records
+   * @param streamTypes set of stream types to filter by
+   * @return filtered list of events
+   */
+  private List<CaseEventLogRecord> filterByStreamType(
+      List<CaseEventLogRecord> events, Set<EventStreamType> streamTypes) {
+    return events.stream()
+        .filter(event -> streamTypes.contains(event.streamType()))
+        .toList();
   }
 }

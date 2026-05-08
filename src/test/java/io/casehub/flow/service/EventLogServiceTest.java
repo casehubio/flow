@@ -230,6 +230,158 @@ class EventLogServiceTest {
         assertThat(result.totalPages()).isEqualTo(0);
     }
 
+    @Test
+    void getEventLog_withEventTypeFilter_callsCorrectRuntimeMethod() {
+        UUID caseId = UUID.randomUUID();
+        List<String> eventTypeNames = List.of("WORKER_EXECUTION_COMPLETED");
+
+        when(runtime.eventLog(eq(caseId), any()))
+                .thenReturn(CompletableFuture.completedFuture(List.of()));
+
+        service.getEventLog(caseId, 1, 50, eventTypeNames, null).await().indefinitely();
+
+        Set<CaseHubEventType> expectedTypes = Set.of(CaseHubEventType.WORKER_EXECUTION_COMPLETED);
+        verify(runtime).eventLog(caseId, expectedTypes);
+    }
+
+    @Test
+    void getEventLog_withMultipleEventTypeFilters_callsCorrectRuntimeMethod() {
+        UUID caseId = UUID.randomUUID();
+        List<String> eventTypeNames = List.of("WORKER_EXECUTION_COMPLETED", "CASE_STATUS_CHANGED");
+
+        when(runtime.eventLog(eq(caseId), any()))
+                .thenReturn(CompletableFuture.completedFuture(List.of()));
+
+        service.getEventLog(caseId, 1, 50, eventTypeNames, null).await().indefinitely();
+
+        Set<CaseHubEventType> expectedTypes = Set.of(
+                CaseHubEventType.WORKER_EXECUTION_COMPLETED,
+                CaseHubEventType.CASE_STATUS_CHANGED);
+        verify(runtime).eventLog(caseId, expectedTypes);
+    }
+
+    @Test
+    void getEventLog_withStreamTypeFilter_callsRuntimeWithNoFilter() {
+        UUID caseId = UUID.randomUUID();
+        List<String> streamTypeNames = List.of("WORKER");
+
+        // Create mixed stream type records
+        Instant now = Instant.now();
+        ObjectNode payload = objectMapper.createObjectNode().put("key", "value");
+        ObjectNode metadata = objectMapper.createObjectNode().put("traceId", "abc");
+
+        List<CaseEventLogRecord> allRecords = List.of(
+                new CaseEventLogRecord(
+                        CaseHubEventType.WORKER_EXECUTION_COMPLETED,
+                        EventStreamType.WORKER,
+                        now,
+                        payload,
+                        metadata),
+                new CaseEventLogRecord(
+                        CaseHubEventType.CASE_STATUS_CHANGED,
+                        EventStreamType.CASE,
+                        now,
+                        payload,
+                        metadata),
+                new CaseEventLogRecord(
+                        CaseHubEventType.WORKER_EXECUTION_COMPLETED,
+                        EventStreamType.WORKER,
+                        now,
+                        payload,
+                        metadata));
+
+        // Engine doesn't support streamType-only filtering, so falls back to no filter
+        when(runtime.eventLog(caseId))
+                .thenReturn(CompletableFuture.completedFuture(allRecords));
+
+        PagedResponse<EventLogEntryResponse> result =
+                service.getEventLog(caseId, 1, 50, null, streamTypeNames).await().indefinitely();
+
+        verify(runtime).eventLog(caseId);
+
+        // Verify only WORKER stream type events are returned
+        assertThat(result.content()).hasSize(2);
+        assertThat(result.content()).allMatch(event -> event.streamType() == EventStreamType.WORKER);
+    }
+
+    @Test
+    void getEventLog_withMultipleStreamTypeFilters_filtersCorrectly() {
+        UUID caseId = UUID.randomUUID();
+        List<String> streamTypeNames = List.of("WORKER", "CASE");
+
+        // Create mixed stream type records with WORKER, CASE, and CASE events
+        // This tests the Set.contains() logic with multiple allowed types
+        Instant now = Instant.now();
+        ObjectNode payload = objectMapper.createObjectNode().put("key", "value");
+        ObjectNode metadata = objectMapper.createObjectNode().put("traceId", "abc");
+
+        List<CaseEventLogRecord> allRecords = List.of(
+                new CaseEventLogRecord(
+                        CaseHubEventType.WORKER_EXECUTION_COMPLETED,
+                        EventStreamType.WORKER,
+                        now,
+                        payload,
+                        metadata),
+                new CaseEventLogRecord(
+                        CaseHubEventType.CASE_STATUS_CHANGED,
+                        EventStreamType.CASE,
+                        now.plusSeconds(1),
+                        payload,
+                        metadata),
+                new CaseEventLogRecord(
+                        CaseHubEventType.WORKER_EXECUTION_COMPLETED,
+                        EventStreamType.WORKER,
+                        now.plusSeconds(2),
+                        payload,
+                        metadata),
+                new CaseEventLogRecord(
+                        CaseHubEventType.CASE_STATUS_CHANGED,
+                        EventStreamType.CASE,
+                        now.plusSeconds(3),
+                        payload,
+                        metadata));
+
+        // Engine doesn't support streamType-only filtering, so falls back to no filter
+        when(runtime.eventLog(caseId))
+                .thenReturn(CompletableFuture.completedFuture(allRecords));
+
+        PagedResponse<EventLogEntryResponse> result =
+                service.getEventLog(caseId, 1, 50, null, streamTypeNames).await().indefinitely();
+
+        verify(runtime).eventLog(caseId);
+
+        // Verify Set membership checking works correctly with multiple stream types
+        assertThat(result.content()).hasSize(4);
+        assertThat(result.content())
+                .allMatch(event -> event.streamType() == EventStreamType.WORKER
+                        || event.streamType() == EventStreamType.CASE);
+
+        // Verify both types are present in results
+        assertThat(result.content())
+                .extracting(EventLogEntryResponse::streamType)
+                .containsExactlyInAnyOrder(
+                        EventStreamType.WORKER,
+                        EventStreamType.CASE,
+                        EventStreamType.WORKER,
+                        EventStreamType.CASE);
+    }
+
+    @Test
+    void getEventLog_withBothFilters_callsCorrectRuntimeMethod() {
+        UUID caseId = UUID.randomUUID();
+        List<String> eventTypeNames = List.of("WORKER_EXECUTION_COMPLETED");
+        List<String> streamTypeNames = List.of("WORKER");
+
+        when(runtime.eventLog(eq(caseId), any(Set.class), any(Set.class)))
+                .thenReturn(CompletableFuture.completedFuture(List.of()));
+
+        service.getEventLog(caseId, 1, 50, eventTypeNames, streamTypeNames).await().indefinitely();
+
+        Set<CaseHubEventType> expectedEventTypes = Set.of(CaseHubEventType.WORKER_EXECUTION_COMPLETED);
+        Set<EventStreamType> expectedStreamTypes = Set.of(EventStreamType.WORKER);
+        verify(runtime).eventLog(caseId, expectedEventTypes, expectedStreamTypes);
+    }
+
     private List<CaseEventLogRecord> createMockRecords(int count) {
         ObjectNode payload = objectMapper.createObjectNode().put("index", 0);
         ObjectNode metadata = objectMapper.createObjectNode().put("traceId", "test");
