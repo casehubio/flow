@@ -19,6 +19,7 @@ import io.casehub.api.engine.CaseHubRuntime;
 import io.casehub.api.model.event.CaseEventLogRecord;
 import io.casehub.api.model.event.CaseHubEventType;
 import io.casehub.api.model.event.EventStreamType;
+import io.casehub.engine.spi.CaseInstanceRepository;
 import io.casehub.flow.rest.dto.EventLogEntryResponse;
 import io.casehub.flow.rest.dto.PagedResponse;
 import io.smallrye.mutiny.Uni;
@@ -39,6 +40,7 @@ import java.util.stream.Collectors;
 public class EventLogService {
 
   @Inject CaseHubRuntime caseHubRuntime;
+  @Inject CaseInstanceRepository instanceRepository;
 
   /**
    * Get paginated and filtered event log for a case.
@@ -57,28 +59,42 @@ public class EventLogService {
       List<String> eventTypeNames,
       List<String> streamTypeNames) {
 
-    // Convert filter strings to enums
-    Set<CaseHubEventType> eventTypes = convertEventTypes(eventTypeNames);
-    Set<EventStreamType> streamTypes = convertStreamTypes(streamTypeNames);
+    // Validate case exists first
+    return instanceRepository
+        .findByUuid(caseId)
+        .onItem()
+        .ifNull()
+        .failWith(
+            () ->
+                new IllegalArgumentException(
+                    "Case instance not found: " + caseId))
+        .flatMap(
+            instance -> {
+              // Convert filter strings to enums
+              Set<CaseHubEventType> eventTypes = convertEventTypes(eventTypeNames);
+              Set<EventStreamType> streamTypes = convertStreamTypes(streamTypeNames);
 
-    // Choose appropriate runtime method based on filters
-    CompletionStage<List<CaseEventLogRecord>> eventLogFuture;
-    if (!eventTypes.isEmpty() && !streamTypes.isEmpty()) {
-      eventLogFuture = caseHubRuntime.eventLog(caseId, eventTypes, streamTypes);
-    } else if (!eventTypes.isEmpty()) {
-      eventLogFuture = caseHubRuntime.eventLog(caseId, eventTypes);
-    } else if (!streamTypes.isEmpty()) {
-      // Engine supports streamType in combination with eventType, but not alone
-      // Fetch all and filter in-memory
-      eventLogFuture = caseHubRuntime.eventLog(caseId)
-          .thenApply(events -> filterByStreamType(events, streamTypes));
-    } else {
-      eventLogFuture = caseHubRuntime.eventLog(caseId);
-    }
+              // Choose appropriate runtime method based on filters
+              CompletionStage<List<CaseEventLogRecord>> eventLogFuture;
+              if (!eventTypes.isEmpty() && !streamTypes.isEmpty()) {
+                eventLogFuture = caseHubRuntime.eventLog(caseId, eventTypes, streamTypes);
+              } else if (!eventTypes.isEmpty()) {
+                eventLogFuture = caseHubRuntime.eventLog(caseId, eventTypes);
+              } else if (!streamTypes.isEmpty()) {
+                // Engine supports streamType in combination with eventType, but not alone
+                // Fetch all and filter in-memory
+                eventLogFuture =
+                    caseHubRuntime
+                        .eventLog(caseId)
+                        .thenApply(events -> filterByStreamType(events, streamTypes));
+              } else {
+                eventLogFuture = caseHubRuntime.eventLog(caseId);
+              }
 
-    return Uni.createFrom()
-        .completionStage(eventLogFuture)
-        .map(events -> buildPagedResponse(events, page, size));
+              return Uni.createFrom()
+                  .completionStage(eventLogFuture)
+                  .map(events -> buildPagedResponse(events, page, size));
+            });
   }
 
   /**

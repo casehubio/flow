@@ -30,8 +30,11 @@ import io.casehub.api.engine.CaseHubRuntime;
 import io.casehub.api.model.event.CaseEventLogRecord;
 import io.casehub.api.model.event.CaseHubEventType;
 import io.casehub.api.model.event.EventStreamType;
+import io.casehub.engine.internal.model.CaseInstance;
+import io.casehub.engine.spi.CaseInstanceRepository;
 import io.casehub.flow.rest.dto.EventLogEntryResponse;
 import io.casehub.flow.rest.dto.PagedResponse;
+import io.smallrye.mutiny.Uni;
 
 import java.time.Instant;
 import java.util.List;
@@ -45,14 +48,22 @@ import org.junit.jupiter.api.Test;
 class EventLogServiceTest {
 
     private CaseHubRuntime runtime;
+    private CaseInstanceRepository instanceRepository;
     private EventLogService service;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
         runtime = mock(CaseHubRuntime.class);
+        instanceRepository = mock(CaseInstanceRepository.class);
         service = new EventLogService();
         service.caseHubRuntime = runtime;
+        service.instanceRepository = instanceRepository;
+
+        // Mock instanceRepository to return a valid instance by default
+        CaseInstance mockInstance = mock(CaseInstance.class);
+        when(instanceRepository.findByUuid(any(UUID.class)))
+            .thenReturn(Uni.createFrom().item(mockInstance));
     }
 
     @Test
