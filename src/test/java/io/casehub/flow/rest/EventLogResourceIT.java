@@ -16,7 +16,9 @@
 package io.casehub.flow.rest;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
@@ -178,5 +180,71 @@ class EventLogResourceIT extends CaseHubIntegrationTestBase {
         .body("content[0].eventType", notNullValue())
         .body("content[0].streamType", notNullValue())
         .body("content[0].timestamp", notNullValue());
+  }
+
+  @Test
+  void getEventLog_filterByEventType_returnsOnlyMatchingEvents() {
+    UUID caseId = startTestCase();
+    waitForEvents(caseId);
+
+    // Filter by a specific event type that exists in the test case
+    given()
+        .queryParam("eventType", "CASE_STARTED")
+        .when()
+        .get("/api/v1/cases/{caseId}/events", caseId)
+        .then()
+        .statusCode(200)
+        .body("content", hasSize(greaterThan(0)))
+        .body("content.eventType", everyItem(equalTo("CASE_STARTED")));
+  }
+
+  @Test
+  void getEventLog_filterByMultipleEventTypes_returnsMatchingEvents() {
+    UUID caseId = startTestCase();
+    waitForEvents(caseId);
+
+    given()
+        .queryParam("eventType", "CASE_STARTED")
+        .queryParam("eventType", "CASE_STATUS_CHANGED")
+        .when()
+        .get("/api/v1/cases/{caseId}/events", caseId)
+        .then()
+        .statusCode(200)
+        .body("content", hasSize(greaterThan(0)))
+        .body(
+            "content.eventType",
+            everyItem(anyOf(equalTo("CASE_STARTED"), equalTo("CASE_STATUS_CHANGED"))));
+  }
+
+  @Test
+  void getEventLog_filterByStreamType_returnsMatchingEvents() {
+    UUID caseId = startTestCase();
+    waitForEvents(caseId);
+
+    given()
+        .queryParam("streamType", "CASE")
+        .when()
+        .get("/api/v1/cases/{caseId}/events", caseId)
+        .then()
+        .statusCode(200)
+        .body("content", hasSize(greaterThan(0)))
+        .body("content.streamType", everyItem(equalTo("CASE")));
+  }
+
+  @Test
+  void getEventLog_combinedFilters_returnsMatchingEvents() {
+    UUID caseId = startTestCase();
+    waitForEvents(caseId);
+
+    given()
+        .queryParam("eventType", "CASE_STARTED")
+        .queryParam("streamType", "CASE")
+        .when()
+        .get("/api/v1/cases/{caseId}/events", caseId)
+        .then()
+        .statusCode(200)
+        .body("content", hasSize(greaterThan(0)))
+        .body("content.eventType", everyItem(equalTo("CASE_STARTED")))
+        .body("content.streamType", everyItem(equalTo("CASE")));
   }
 }
