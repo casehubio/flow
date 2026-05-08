@@ -36,10 +36,43 @@ import org.jboss.logging.Logger;
 /**
  * REST API for case event log operations.
  *
+ * <p>Provides access to immutable event logs for case instances, enabling:
+ *
+ * <ul>
+ *   <li>Observability - track worker executions, state changes, signals
+ *   <li>Debugging - inspect case execution history with timestamps and payloads
+ *   <li>Compliance - audit trail for regulatory requirements
+ * </ul>
+ *
  * <p>Endpoints:
  *
  * <ul>
- *   <li>GET /api/v1/cases/{caseId}/events — get paginated event log
+ *   <li>GET /api/v1/cases/{caseId}/events — get paginated and filtered event log
+ * </ul>
+ *
+ * <p>Query Parameters:
+ *
+ * <ul>
+ *   <li>page (int, default=1) - page number (1-indexed)
+ *   <li>size (int, default=50, max=1000) - page size
+ *   <li>eventType (String[], optional) - filter by event types (repeatable)
+ *   <li>streamType (String[], optional) - filter by stream types (repeatable)
+ * </ul>
+ *
+ * <p>Example:
+ *
+ * <pre>
+ * GET /api/v1/cases/123e4567-e89b-12d3-a456-426614174000/events?page=1&size=20&eventType=WORKER_EXECUTION_COMPLETED
+ * </pre>
+ *
+ * <p>Response: {@link PagedResponse} containing {@link EventLogEntryResponse} objects
+ *
+ * <p>Error Responses:
+ *
+ * <ul>
+ *   <li>400 Bad Request - invalid pagination or filter parameters
+ *   <li>404 Not Found - case does not exist
+ *   <li>500 Internal Server Error - unexpected failure
  * </ul>
  */
 @Path("/api/v1/cases/{caseId}/events")
