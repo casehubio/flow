@@ -41,4 +41,100 @@ class EventLogResourceIT {
         .body("status", equalTo(404))
         .body("detail", notNullValue());
   }
+
+  @Test
+  void getEventLog_invalidPage_returns400() {
+    UUID caseId = UUID.randomUUID();
+
+    given()
+        .queryParam("page", 0)
+        .when()
+        .get("/api/v1/cases/{caseId}/events", caseId)
+        .then()
+        .statusCode(400)
+        .contentType(ContentType.JSON)
+        .body("title", equalTo("Invalid pagination parameters"))
+        .body("status", equalTo(400))
+        .body("detail", notNullValue());
+  }
+
+  @Test
+  void getEventLog_negativeSize_returns400() {
+    UUID caseId = UUID.randomUUID();
+
+    given()
+        .queryParam("size", -1)
+        .when()
+        .get("/api/v1/cases/{caseId}/events", caseId)
+        .then()
+        .statusCode(400)
+        .contentType(ContentType.JSON)
+        .body("title", equalTo("Invalid pagination parameters"))
+        .body("status", equalTo(400))
+        .body("detail", notNullValue());
+  }
+
+  @Test
+  void getEventLog_sizeTooLarge_returns400() {
+    UUID caseId = UUID.randomUUID();
+
+    given()
+        .queryParam("size", 1001)
+        .when()
+        .get("/api/v1/cases/{caseId}/events", caseId)
+        .then()
+        .statusCode(400)
+        .contentType(ContentType.JSON)
+        .body("title", equalTo("Invalid pagination parameters"))
+        .body("status", equalTo(400))
+        .body("detail", notNullValue());
+  }
+
+  @Test
+  void getEventLog_invalidEventType_returns400() {
+    UUID caseId = UUID.randomUUID();
+
+    given()
+        .queryParam("eventType", "INVALID_EVENT")
+        .when()
+        .get("/api/v1/cases/{caseId}/events", caseId)
+        .then()
+        .statusCode(400)
+        .contentType(ContentType.JSON)
+        .body("title", equalTo("Invalid filter parameter"))
+        .body("status", equalTo(400))
+        .body("detail", notNullValue());
+  }
+
+  @Test
+  void getEventLog_invalidStreamType_returns400() {
+    UUID caseId = UUID.randomUUID();
+
+    given()
+        .queryParam("streamType", "INVALID_STREAM")
+        .when()
+        .get("/api/v1/cases/{caseId}/events", caseId)
+        .then()
+        .statusCode(400)
+        .contentType(ContentType.JSON)
+        .body("title", equalTo("Invalid filter parameter"))
+        .body("status", equalTo(400))
+        .body("detail", notNullValue());
+  }
+
+  @Test
+  void getEventLog_sizeZero_returns400() {
+    UUID caseId = UUID.randomUUID();
+
+    given()
+        .queryParam("size", 0)
+        .when()
+        .get("/api/v1/cases/{caseId}/events", caseId)
+        .then()
+        .statusCode(400)
+        .contentType(ContentType.JSON)
+        .body("title", equalTo("Invalid pagination parameters"))
+        .body("status", equalTo(400))
+        .body("detail", notNullValue());
+  }
 }

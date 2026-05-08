@@ -20,6 +20,7 @@ import io.casehub.api.model.event.CaseEventLogRecord;
 import io.casehub.api.model.event.CaseHubEventType;
 import io.casehub.api.model.event.EventStreamType;
 import io.casehub.engine.spi.CaseInstanceRepository;
+import io.casehub.flow.exception.CaseInstanceNotFoundException;
 import io.casehub.flow.rest.dto.EventLogEntryResponse;
 import io.casehub.flow.rest.dto.PagedResponse;
 import io.smallrye.mutiny.Uni;
@@ -64,10 +65,7 @@ public class EventLogService {
         .findByUuid(caseId)
         .onItem()
         .ifNull()
-        .failWith(
-            () ->
-                new IllegalArgumentException(
-                    "Case instance not found: " + caseId))
+        .failWith(() -> new CaseInstanceNotFoundException(caseId))
         .flatMap(
             instance -> {
               // Convert filter strings to enums
