@@ -28,6 +28,8 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Service for managing case instance lifecycle.
@@ -71,7 +73,7 @@ public class CaseInstanceService {
         .onItem()
         .ifNull()
         .failWith(() -> new CaseHubNotFoundException(namespace, name, version))
-        .map(optional -> optional.orElseThrow())
+        .map(Optional::orElseThrow)
 
         // 3. Start case via CaseHub
         .flatMap(hub -> Uni.createFrom().completionStage(() -> hub.startCase(context)))
@@ -98,7 +100,7 @@ public class CaseInstanceService {
    * @param caseId case instance UUID
    * @return case instance response with status and metadata
    */
-  public Uni<CaseInstanceResponse> getCaseInstance(java.util.UUID caseId) {
+  public Uni<CaseInstanceResponse> getCaseInstance(UUID caseId) {
     return instanceRepository
         .findByUuid(caseId)
         .onItem()
@@ -114,7 +116,7 @@ public class CaseInstanceService {
    * @return case context data as map
    */
   @SuppressWarnings("unchecked")
-  public Uni<Map<String, Object>> getCaseContext(java.util.UUID caseId) {
+  public Uni<Map<String, Object>> getCaseContext(UUID caseId) {
     return Uni.createFrom()
         .completionStage(() -> caseHubRuntime.query(caseId, ".", Map.class))
         .map(map -> (Map<String, Object>) map)
@@ -139,7 +141,7 @@ public class CaseInstanceService {
    * @param path dot-notation path to query (e.g., "customer.name")
    * @return value at path, or null if path doesn't exist
    */
-  public Uni<Object> getContextPath(java.util.UUID caseId, String path) {
+  public Uni<Object> getContextPath(UUID caseId, String path) {
     return Uni.createFrom()
         .completionStage(() -> caseHubRuntime.query(caseId, path, Object.class))
         .onFailure(RuntimeException.class)
