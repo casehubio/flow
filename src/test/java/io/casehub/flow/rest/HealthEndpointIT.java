@@ -32,7 +32,9 @@ class HealthEndpointIT extends CaseHubIntegrationTestBase {
         .get("/q/health/live")
         .then()
         .statusCode(200)
-        .body("status", is("UP"));
+        .body("status", is("UP"))
+        .body("checks.name", hasItem("Application live"))
+        .body("checks.find { it.name == 'Application live' }.status", is("UP"));
   }
 
   @Test
