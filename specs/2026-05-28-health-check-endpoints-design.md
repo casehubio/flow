@@ -26,7 +26,23 @@ All provided automatically by SmallRye Health:
 
 ### Components
 
-**1. Liveness** — zero custom code. Quarkus provides a default liveness check when SmallRye Health is on the classpath.
+**1. ApplicationLivenessCheck** — one custom `@Liveness` check that always returns UP. The fact that it responds proves the JVM is alive.
+
+```java
+package io.casehub.flow.health;
+
+@ApplicationScoped
+@Liveness
+public class ApplicationLivenessCheck implements HealthCheck {
+
+    @Override
+    public HealthCheckResponse call() {
+        return HealthCheckResponse.named("Application live")
+                .up()
+                .build();
+    }
+}
+```
 
 **2. Database readiness** — zero custom code. Quarkus auto-registers a reactive datasource health check when it detects `quarkus-reactive-pg-client` + `quarkus-smallrye-health` together. Validates connection pool health.
 
@@ -72,7 +88,17 @@ No custom configuration required beyond adding the dependency. Quarkus defaults:
 | After startup, DB unreachable | 200 | 503 (engine: UP, DB: DOWN) | — |
 | JVM crashed / hung | No response | No response | k8s restarts pod |
 
-Health response format (SmallRye default):
+Liveness response format:
+```json
+{
+  "status": "UP",
+  "checks": [
+    { "name": "Application live", "status": "UP" }
+  ]
+}
+```
+
+Readiness response format:
 ```json
 {
   "status": "UP",
@@ -108,6 +134,8 @@ DB-down scenario in integration tests — would require killing the testcontaine
 | File | Change |
 |---|---|
 | `pom.xml` | Add `quarkus-smallrye-health` dependency |
+| `src/main/java/io/casehub/flow/health/ApplicationLivenessCheck.java` | New: custom liveness check |
 | `src/main/java/io/casehub/flow/health/CaseEngineHealthCheck.java` | New: custom readiness check |
-| `src/test/java/io/casehub/flow/health/CaseEngineHealthCheckTest.java` | New: unit tests |
+| `src/test/java/io/casehub/flow/health/ApplicationLivenessCheckTest.java` | New: liveness unit test |
+| `src/test/java/io/casehub/flow/health/CaseEngineHealthCheckTest.java` | New: readiness unit tests |
 | `src/test/java/io/casehub/flow/rest/HealthEndpointIT.java` | New: integration tests |
