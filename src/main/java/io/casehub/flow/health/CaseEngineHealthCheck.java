@@ -16,6 +16,7 @@
 package io.casehub.flow.health;
 
 import io.quarkus.runtime.StartupEvent;
+import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -29,7 +30,7 @@ public class CaseEngineHealthCheck implements HealthCheck {
 
     private final AtomicBoolean engineReady = new AtomicBoolean(false);
 
-    void onStartup(@Observes StartupEvent event) {
+    void onStartup(@Observes @Priority(100) StartupEvent event) {
         engineReady.set(true);
     }
 
