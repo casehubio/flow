@@ -89,7 +89,7 @@ class YamlCaseDefinitionLoaderTest {
         .statusCode(200)
         .body("bindings", hasSize(1))
         .body("bindings[0].name", equalTo("trigger-on-data"))
-        .body("bindings[0].capability", notNullValue());
+        .body("bindings[0].target", notNullValue());
   }
 
   @Test

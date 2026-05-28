@@ -17,7 +17,7 @@ package io.casehub.flow.loader;
 
 import io.casehub.api.engine.CaseHub;
 import io.casehub.api.model.CaseDefinition;
-import io.casehub.engine.spi.CaseDefinitionRegistry;
+import io.casehub.engine.common.spi.CaseDefinitionRegistry;
 import io.quarkus.arc.Arc;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.annotation.Priority;
@@ -60,169 +60,170 @@ import org.jboss.logging.Logger;
 @ApplicationScoped
 public class CaseHubClassPathLoader {
 
-  private static final Logger LOG = Logger.getLogger(CaseHubClassPathLoader.class);
-  private static final String JANDEX_INDEX = "META-INF/jandex.idx";
-  private static final DotName CASE_HUB = DotName.createSimple(CaseHub.class.getName());
+    private static final Logger LOG = Logger.getLogger(CaseHubClassPathLoader.class);
+    private static final String JANDEX_INDEX = "META-INF/jandex.idx";
+    private static final DotName CASE_HUB = DotName.createSimple(CaseHub.class.getName());
 
-  @Inject CaseDefinitionRegistry caseDefinitionRegistry;
+    @Inject
+    CaseDefinitionRegistry caseDefinitionRegistry;
 
-  void onStart(@Observes @Priority(20) StartupEvent event) {
-    ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-    IndexView index = loadIndex(classLoader);
+    void onStart(@Observes @Priority(20) StartupEvent event) {
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        IndexView index = loadIndex(classLoader);
 
-    List<ClassInfo> caseHubClasses =
-        index.getAllKnownSubclasses(CASE_HUB).stream()
-            .filter(this::isConcreteClass)
-            .sorted(Comparator.comparing(info -> info.name().toString()))
-            .toList();
+        List<ClassInfo> caseHubClasses =
+                index.getAllKnownSubclasses(CASE_HUB).stream()
+                        .filter(this::isConcreteClass)
+                        .sorted(Comparator.comparing(info -> info.name().toString()))
+                        .toList();
 
-    int registered = 0;
-    for (ClassInfo classInfo : caseHubClasses) {
-      if (registerClass(classInfo, classLoader)) {
-        registered++;
-      }
-    }
-
-    LOG.infof("Discovered and registered %d CaseHub classpath definition(s)", registered);
-  }
-
-  private IndexView loadIndex(ClassLoader classLoader) {
-    List<IndexView> indexes = new ArrayList<>();
-    indexes.addAll(loadJandexIndexes(classLoader));
-    indexes.add(indexClasspathDirectories());
-
-    if (indexes.isEmpty()) {
-      return IndexView.empty();
-    }
-    return CompositeIndex.create(indexes);
-  }
-
-  private List<IndexView> loadJandexIndexes(ClassLoader classLoader) {
-    List<IndexView> indexes = new ArrayList<>();
-    Set<String> seen = new LinkedHashSet<>();
-
-    try {
-      Enumeration<URL> resources = classLoader.getResources(JANDEX_INDEX);
-      while (resources.hasMoreElements()) {
-        URL resource = resources.nextElement();
-        if (!seen.add(resource.toExternalForm())) {
-          continue;
+        int registered = 0;
+        for (ClassInfo classInfo : caseHubClasses) {
+            if (registerClass(classInfo, classLoader)) {
+                registered++;
+            }
         }
-        try (InputStream stream = resource.openStream()) {
-          indexes.add(new IndexReader(stream).read());
+
+        LOG.infof("Discovered and registered %d CaseHub classpath definition(s)", registered);
+    }
+
+    private IndexView loadIndex(ClassLoader classLoader) {
+        List<IndexView> indexes = new ArrayList<>();
+        indexes.addAll(loadJandexIndexes(classLoader));
+        indexes.add(indexClasspathDirectories());
+
+        if (indexes.isEmpty()) {
+            return IndexView.empty();
+        }
+        return CompositeIndex.create(indexes);
+    }
+
+    private List<IndexView> loadJandexIndexes(ClassLoader classLoader) {
+        List<IndexView> indexes = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
+
+        try {
+            Enumeration<URL> resources = classLoader.getResources(JANDEX_INDEX);
+            while (resources.hasMoreElements()) {
+                URL resource = resources.nextElement();
+                if (!seen.add(resource.toExternalForm())) {
+                    continue;
+                }
+                try (InputStream stream = resource.openStream()) {
+                    indexes.add(new IndexReader(stream).read());
+                } catch (IOException e) {
+                    LOG.debugf(e, "Failed to read Jandex index %s", resource);
+                }
+            }
         } catch (IOException e) {
-          LOG.debugf(e, "Failed to read Jandex index %s", resource);
+            LOG.debugf(e, "Failed to enumerate Jandex indexes");
         }
-      }
-    } catch (IOException e) {
-      LOG.debugf(e, "Failed to enumerate Jandex indexes");
+
+        return indexes;
     }
 
-    return indexes;
-  }
+    private Index indexClasspathDirectories() {
+        Indexer indexer = new Indexer();
+        String classPath = System.getProperty("java.class.path", "");
+        Set<Path> roots = new LinkedHashSet<>();
 
-  private Index indexClasspathDirectories() {
-    Indexer indexer = new Indexer();
-    String classPath = System.getProperty("java.class.path", "");
-    Set<Path> roots = new LinkedHashSet<>();
+        for (String entry : classPath.split(java.io.File.pathSeparator)) {
+            if (entry.isBlank()) {
+                continue;
+            }
+            Path path = Path.of(entry);
+            if (Files.isDirectory(path)) {
+                roots.add(path);
+            }
+        }
 
-    for (String entry : classPath.split(java.io.File.pathSeparator)) {
-      if (entry.isBlank()) {
-        continue;
-      }
-      Path path = Path.of(entry);
-      if (Files.isDirectory(path)) {
-        roots.add(path);
-      }
+        for (Path root : roots) {
+            indexDirectory(root, indexer);
+        }
+
+        return indexer.complete();
     }
 
-    for (Path root : roots) {
-      indexDirectory(root, indexer);
+    private void indexDirectory(Path root, Indexer indexer) {
+        try (Stream<Path> paths = Files.walk(root)) {
+            paths
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.toString().endsWith(".class"))
+                    .filter(path -> !path.getFileName().toString().equals("module-info.class"))
+                    .forEach(path -> indexClass(path, indexer));
+        } catch (IOException e) {
+            LOG.debugf(e, "Failed to scan classpath directory %s", root);
+        }
     }
 
-    return indexer.complete();
-  }
-
-  private void indexDirectory(Path root, Indexer indexer) {
-    try (Stream<Path> paths = Files.walk(root)) {
-      paths
-          .filter(Files::isRegularFile)
-          .filter(path -> path.toString().endsWith(".class"))
-          .filter(path -> !path.getFileName().toString().equals("module-info.class"))
-          .forEach(path -> indexClass(path, indexer));
-    } catch (IOException e) {
-      LOG.debugf(e, "Failed to scan classpath directory %s", root);
+    private void indexClass(Path path, Indexer indexer) {
+        try (InputStream stream = Files.newInputStream(path)) {
+            indexer.index(stream);
+        } catch (IOException e) {
+            LOG.debugf(e, "Failed to index class file %s", path);
+        }
     }
-  }
 
-  private void indexClass(Path path, Indexer indexer) {
-    try (InputStream stream = Files.newInputStream(path)) {
-      indexer.index(stream);
-    } catch (IOException e) {
-      LOG.debugf(e, "Failed to index class file %s", path);
+    private boolean isConcreteClass(ClassInfo classInfo) {
+        return !classInfo.name().equals(CASE_HUB)
+                && !classInfo.isInterface()
+                && !classInfo.isAbstract()
+                && !classInfo.isSynthetic();
     }
-  }
 
-  private boolean isConcreteClass(ClassInfo classInfo) {
-    return !classInfo.name().equals(CASE_HUB)
-        && !classInfo.isInterface()
-        && !classInfo.isAbstract()
-        && !classInfo.isSynthetic();
-  }
+    private boolean registerClass(ClassInfo classInfo, ClassLoader classLoader) {
+        String className = classInfo.name().toString();
 
-  private boolean registerClass(ClassInfo classInfo, ClassLoader classLoader) {
-    String className = classInfo.name().toString();
+        try {
+            Class<?> rawClass = Class.forName(className, false, classLoader);
+            if (!CaseHub.class.isAssignableFrom(rawClass)
+                    || rawClass.isInterface()
+                    || Modifier.isAbstract(rawClass.getModifiers())) {
+                return false;
+            }
 
-    try {
-      Class<?> rawClass = Class.forName(className, false, classLoader);
-      if (!CaseHub.class.isAssignableFrom(rawClass)
-          || rawClass.isInterface()
-          || Modifier.isAbstract(rawClass.getModifiers())) {
+            Class<? extends CaseHub> caseHubClass = rawClass.asSubclass(CaseHub.class);
+            if (Arc.container().instance(caseHubClass).isAvailable()) {
+                LOG.debugf("Skipping CDI-managed CaseHub class %s", className);
+                return false;
+            }
+
+            CaseHub caseHub = instantiate(caseHubClass);
+            CaseDefinition definition = caseHub.getDefinition();
+
+            caseDefinitionRegistry
+                    .registerCaseDefinition(definition)
+                    .await()
+                    .atMost(Duration.ofSeconds(10));
+
+            LOG.infof(
+                    "Registered CaseHub class: %s -> %s/%s v%s",
+                    className, definition.getNamespace(), definition.getName(), definition.getVersion());
+            return true;
+        } catch (ClassNotFoundException | LinkageError e) {
+            LOG.debugf(e, "Skipping unavailable CaseHub class %s", className);
+        } catch (NoSuchMethodException e) {
+            LOG.warnf("Skipping CaseHub class %s: no no-argument constructor found", className);
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+            LOG.errorf(e, "Failed to instantiate CaseHub class %s", className);
+        } catch (RuntimeException e) {
+            throw new RuntimeException(
+                    "Failed to register CaseHub class " + className + ": " + e.getMessage(), e);
+        }
+
         return false;
-      }
-
-      Class<? extends CaseHub> caseHubClass = rawClass.asSubclass(CaseHub.class);
-      if (Arc.container().instance(caseHubClass).isAvailable()) {
-        LOG.debugf("Skipping CDI-managed CaseHub class %s", className);
-        return false;
-      }
-
-      CaseHub caseHub = instantiate(caseHubClass);
-      CaseDefinition definition = caseHub.getDefinition();
-
-      caseDefinitionRegistry
-          .registerCaseDefinition(definition)
-          .await()
-          .atMost(Duration.ofSeconds(10));
-
-      LOG.infof(
-          "Registered CaseHub class: %s -> %s/%s v%s",
-          className, definition.getNamespace(), definition.getName(), definition.getVersion());
-      return true;
-    } catch (ClassNotFoundException | LinkageError e) {
-      LOG.debugf(e, "Skipping unavailable CaseHub class %s", className);
-    } catch (NoSuchMethodException e) {
-      LOG.warnf("Skipping CaseHub class %s: no no-argument constructor found", className);
-    } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-      LOG.errorf(e, "Failed to instantiate CaseHub class %s", className);
-    } catch (RuntimeException e) {
-      throw new RuntimeException(
-          "Failed to register CaseHub class " + className + ": " + e.getMessage(), e);
     }
 
-    return false;
-  }
-
-  private CaseHub instantiate(Class<? extends CaseHub> caseHubClass)
-      throws NoSuchMethodException,
-          InvocationTargetException,
-          InstantiationException,
-          IllegalAccessException {
-    Constructor<? extends CaseHub> constructor = caseHubClass.getDeclaredConstructor();
-    if (!Modifier.isPublic(caseHubClass.getModifiers())
-        || !Modifier.isPublic(constructor.getModifiers())) {
-      constructor.setAccessible(true);
+    private CaseHub instantiate(Class<? extends CaseHub> caseHubClass)
+            throws NoSuchMethodException,
+            InvocationTargetException,
+            InstantiationException,
+            IllegalAccessException {
+        Constructor<? extends CaseHub> constructor = caseHubClass.getDeclaredConstructor();
+        if (!Modifier.isPublic(caseHubClass.getModifiers())
+                || !Modifier.isPublic(constructor.getModifiers())) {
+            constructor.setAccessible(true);
+        }
+        return constructor.newInstance();
     }
-    return constructor.newInstance();
-  }
 }

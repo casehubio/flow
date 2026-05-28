@@ -19,7 +19,7 @@ import io.casehub.api.engine.CaseHubRuntime;
 import io.casehub.api.model.event.CaseEventLogRecord;
 import io.casehub.api.model.event.CaseHubEventType;
 import io.casehub.api.model.event.EventStreamType;
-import io.casehub.engine.spi.CaseInstanceRepository;
+import io.casehub.engine.common.spi.CaseInstanceRepository;
 import io.casehub.flow.exception.CaseInstanceNotFoundException;
 import io.casehub.flow.rest.dto.EventLogEntryResponse;
 import io.casehub.flow.rest.dto.PagedResponse;
