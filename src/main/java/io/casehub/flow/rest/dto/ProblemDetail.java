@@ -15,6 +15,8 @@
  */
 package io.casehub.flow.rest.dto;
 
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+
 /**
  * RFC 7807 Problem Details for HTTP APIs.
  *
@@ -22,4 +24,12 @@ package io.casehub.flow.rest.dto;
  * @param status the HTTP status code
  * @param detail a human-readable explanation specific to this occurrence
  */
-public record ProblemDetail(String title, int status, String detail) {}
+@Schema(description = "RFC 7807 Problem Details error response")
+public record ProblemDetail(
+    @Schema(description = "Short human-readable error summary", example = "Case not found")
+    String title,
+    @Schema(description = "HTTP status code", example = "404")
+    int status,
+    @Schema(description = "Detailed human-readable explanation",
+            example = "Case instance abc-123 not found")
+    String detail) {}

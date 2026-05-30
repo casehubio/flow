@@ -19,6 +19,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.Map;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 /**
  * Request to start a new case instance.
@@ -27,8 +28,12 @@ import java.util.Map;
  * @param context initial case context data (optional, defaults to empty map).
  *                Acceptable value types: String, Number, Boolean, null, Map, List.
  */
+@Schema(description = "Request to start a new case instance")
 public record StartCaseRequest(
+    @Schema(description = "Case definition reference", required = true)
     @NotNull @Valid CaseDefinitionRef definition,
+    @Schema(description = "Initial case context data", nullable = true,
+            example = "{\"customer\": {\"name\": \"John\"}}")
     Map<String, Object> context) {
 
   public StartCaseRequest {
@@ -42,8 +47,12 @@ public record StartCaseRequest(
    * @param name case name
    * @param version case version
    */
+  @Schema(description = "Reference to a registered case definition")
   public record CaseDefinitionRef(
+      @Schema(description = "Case namespace", required = true, example = "acme")
       @NotBlank String namespace,
+      @Schema(description = "Case name", required = true, example = "Order Processing")
       @NotBlank String name,
+      @Schema(description = "Case version", required = true, example = "1.0.0")
       @NotBlank String version) {}
 }

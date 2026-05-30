@@ -17,6 +17,7 @@ package io.casehub.flow.rest.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 /**
  * Request payload for sending signal to case instance.
@@ -25,4 +26,11 @@ import jakarta.validation.constraints.NotNull;
  * @param value signal data to set at path. Acceptable value types: String, Number, Boolean,
  *     null, Map, List.
  */
-public record SendSignalRequest(@NotBlank String path, @NotNull Object value) {}
+@Schema(description = "Request to send a signal to a running case")
+public record SendSignalRequest(
+    @Schema(description = "Dot-notation context path", required = true,
+            example = "approvals.manager")
+    @NotBlank String path,
+    @Schema(description = "Signal value (String, Number, Boolean, Map, or List)",
+            required = true, example = "approved")
+    @NotNull Object value) {}

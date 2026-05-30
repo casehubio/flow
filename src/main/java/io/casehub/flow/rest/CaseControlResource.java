@@ -20,6 +20,12 @@ import io.casehub.flow.rest.dto.CaseControlRequest;
 import io.casehub.flow.rest.dto.CaseControlResponse;
 import io.casehub.flow.rest.dto.ProblemDetail;
 import io.smallrye.mutiny.Uni;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
@@ -45,6 +51,7 @@ import org.jboss.logging.Logger;
 @Path("/api/v1/cases/{caseId}")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Tag(name = "Case Control", description = "Case lifecycle operations (suspend, resume, cancel)")
 public class CaseControlResource {
 
   private static final Logger LOG = Logger.getLogger(CaseControlResource.class);
@@ -60,6 +67,17 @@ public class CaseControlResource {
    */
   @POST
   @Path("suspend")
+  @Operation(summary = "Suspend a running case",
+             description = "Queues a case suspension for async processing")
+  @Parameter(name = "caseId", description = "Case instance UUID", required = true)
+  @APIResponse(responseCode = "202", description = "Suspension queued",
+               content = @Content(schema = @Schema(implementation = CaseControlResponse.class)))
+  @APIResponse(responseCode = "404", description = "Case not found",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+  @APIResponse(responseCode = "409", description = "Invalid state transition",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+  @APIResponse(responseCode = "500", description = "Internal server error",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> suspend(
       @PathParam("caseId") UUID caseId, CaseControlRequest request) {
     return Uni.createFrom()
@@ -117,6 +135,17 @@ public class CaseControlResource {
    */
   @POST
   @Path("resume")
+  @Operation(summary = "Resume a suspended case",
+             description = "Queues a case resumption for async processing")
+  @Parameter(name = "caseId", description = "Case instance UUID", required = true)
+  @APIResponse(responseCode = "202", description = "Resumption queued",
+               content = @Content(schema = @Schema(implementation = CaseControlResponse.class)))
+  @APIResponse(responseCode = "404", description = "Case not found",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+  @APIResponse(responseCode = "409", description = "Invalid state transition",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+  @APIResponse(responseCode = "500", description = "Internal server error",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> resume(@PathParam("caseId") UUID caseId, CaseControlRequest request) {
     return Uni.createFrom()
         .emitter(
@@ -173,6 +202,17 @@ public class CaseControlResource {
    */
   @POST
   @Path("cancel")
+  @Operation(summary = "Cancel a running case",
+             description = "Queues a case cancellation for async processing")
+  @Parameter(name = "caseId", description = "Case instance UUID", required = true)
+  @APIResponse(responseCode = "202", description = "Cancellation queued",
+               content = @Content(schema = @Schema(implementation = CaseControlResponse.class)))
+  @APIResponse(responseCode = "404", description = "Case not found",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+  @APIResponse(responseCode = "409", description = "Invalid state transition",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+  @APIResponse(responseCode = "500", description = "Internal server error",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> cancel(@PathParam("caseId") UUID caseId, CaseControlRequest request) {
     return Uni.createFrom()
         .emitter(

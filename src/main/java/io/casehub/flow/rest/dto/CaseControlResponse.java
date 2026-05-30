@@ -16,6 +16,7 @@
 package io.casehub.flow.rest.dto;
 
 import java.util.UUID;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 /**
  * Response for case control operations (202 Accepted).
@@ -25,5 +26,15 @@ import java.util.UUID;
  * @param status operation status ("accepted")
  * @param message human-readable confirmation message
  */
+@Schema(description = "Response for case control operations")
 public record CaseControlResponse(
-    UUID caseId, String operation, String status, String message) {}
+    @Schema(description = "Case instance UUID", required = true,
+            example = "550e8400-e29b-41d4-a716-446655440000")
+    UUID caseId,
+    @Schema(description = "Operation performed", required = true, example = "suspend")
+    String operation,
+    @Schema(description = "Operation status", required = true, example = "accepted")
+    String status,
+    @Schema(description = "Human-readable status message", required = true,
+            example = "Case suspension queued for processing")
+    String message) {}
