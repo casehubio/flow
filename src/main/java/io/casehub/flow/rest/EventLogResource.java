@@ -17,9 +17,16 @@ package io.casehub.flow.rest;
 
 import io.casehub.flow.exception.CaseInstanceNotFoundException;
 import io.casehub.flow.exception.ValidationException;
+import io.casehub.flow.rest.dto.PagedResponse;
 import io.casehub.flow.rest.dto.ProblemDetail;
 import io.casehub.flow.service.EventLogService;
 import io.smallrye.mutiny.Uni;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
@@ -77,6 +84,7 @@ import org.jboss.logging.Logger;
  */
 @Path("/api/v1/cases/{caseId}/events")
 @Produces(MediaType.APPLICATION_JSON)
+@Tag(name = "Event Log", description = "Case event log and audit trail")
 public class EventLogResource {
 
   private static final Logger LOG = Logger.getLogger(EventLogResource.class);
@@ -95,6 +103,23 @@ public class EventLogResource {
    * @return 200 OK with paged event log, 404 if case not found, 400 for invalid parameters
    */
   @GET
+  @Operation(summary = "Get case event log",
+             description = "Returns a paginated and filtered event log for a case instance")
+  @Parameter(name = "caseId", description = "Case instance UUID", required = true)
+  @Parameter(name = "page", description = "Page number (1-indexed)", example = "1")
+  @Parameter(name = "size", description = "Page size (1-1000)", example = "50")
+  @Parameter(name = "eventType", description = "Filter by event type (repeatable)",
+             example = "CASE_STARTED")
+  @Parameter(name = "streamType", description = "Filter by stream type (repeatable)",
+             example = "CASE")
+  @APIResponse(responseCode = "200", description = "Paginated event log",
+               content = @Content(schema = @Schema(implementation = PagedResponse.class)))
+  @APIResponse(responseCode = "400", description = "Invalid parameters",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+  @APIResponse(responseCode = "404", description = "Case instance not found",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+  @APIResponse(responseCode = "500", description = "Internal server error",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> getEventLog(
       @PathParam("caseId") UUID caseId,
       @QueryParam("page") @DefaultValue("1") int page,
