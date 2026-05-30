@@ -17,10 +17,18 @@ package io.casehub.flow.rest;
 
 import io.casehub.flow.exception.CaseInstanceNotFoundException;
 import io.casehub.flow.exception.DefinitionNotFoundException;
+import io.casehub.flow.rest.dto.CaseInstanceResponse;
 import io.casehub.flow.rest.dto.ProblemDetail;
 import io.casehub.flow.rest.dto.StartCaseRequest;
 import io.casehub.flow.service.CaseInstanceService;
 import io.smallrye.mutiny.Uni;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
@@ -47,6 +55,7 @@ import java.util.UUID;
 @Path("/api/v1/cases")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Tag(name = "Case Instances", description = "Case instance lifecycle and context")
 public class CaseInstanceResource {
 
   @Inject CaseInstanceService caseInstanceService;
@@ -59,6 +68,19 @@ public class CaseInstanceResource {
    *     request
    */
   @POST
+  @Operation(summary = "Start a new case instance",
+             description = "Creates and starts a new case instance from a registered definition")
+  @RequestBody(description = "Case start request with definition reference and optional context",
+               required = true,
+               content = @Content(schema = @Schema(implementation = StartCaseRequest.class)))
+  @APIResponse(responseCode = "200", description = "Case instance started",
+               content = @Content(schema = @Schema(implementation = CaseInstanceResponse.class)))
+  @APIResponse(responseCode = "400", description = "Invalid request",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+  @APIResponse(responseCode = "404", description = "Case definition not found",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+  @APIResponse(responseCode = "500", description = "Internal server error",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> startCase(StartCaseRequest request) {
     // Validation
     if (request == null || request.definition() == null) {
@@ -102,6 +124,15 @@ public class CaseInstanceResource {
    */
   @GET
   @Path("/{caseId}")
+  @Operation(summary = "Get case instance by ID",
+             description = "Returns the status and metadata of a case instance")
+  @Parameter(name = "caseId", description = "Case instance UUID", required = true)
+  @APIResponse(responseCode = "200", description = "Case instance found",
+               content = @Content(schema = @Schema(implementation = CaseInstanceResponse.class)))
+  @APIResponse(responseCode = "404", description = "Case instance not found",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+  @APIResponse(responseCode = "500", description = "Internal server error",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> getCaseInstance(@PathParam("caseId") UUID caseId) {
     return caseInstanceService
         .getCaseInstance(caseId)
@@ -132,6 +163,14 @@ public class CaseInstanceResource {
    */
   @GET
   @Path("/{caseId}/context")
+  @Operation(summary = "Get full case context",
+             description = "Returns the complete context data of a case instance")
+  @Parameter(name = "caseId", description = "Case instance UUID", required = true)
+  @APIResponse(responseCode = "200", description = "Case context data")
+  @APIResponse(responseCode = "404", description = "Case instance not found",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+  @APIResponse(responseCode = "500", description = "Internal server error",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> getContext(@PathParam("caseId") UUID caseId) {
     return caseInstanceService
         .getCaseContext(caseId)
@@ -163,6 +202,16 @@ public class CaseInstanceResource {
    */
   @GET
   @Path("/{caseId}/context/{path}")
+  @Operation(summary = "Get case context by path",
+             description = "Returns a specific value from the case context using dot-notation path")
+  @Parameter(name = "caseId", description = "Case instance UUID", required = true)
+  @Parameter(name = "path", description = "Dot-notation context path (e.g., customer.name)",
+             required = true, example = "customer.name")
+  @APIResponse(responseCode = "200", description = "Value at context path")
+  @APIResponse(responseCode = "404", description = "Case instance not found",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+  @APIResponse(responseCode = "500", description = "Internal server error",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> getContextPath(@PathParam("caseId") UUID caseId, @PathParam("path") String path) {
     return caseInstanceService
         .getContextPath(caseId, path)
