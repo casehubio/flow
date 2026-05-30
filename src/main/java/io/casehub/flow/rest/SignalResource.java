@@ -21,6 +21,13 @@ import io.casehub.flow.rest.dto.ProblemDetail;
 import io.casehub.flow.rest.dto.SendSignalRequest;
 import io.casehub.flow.rest.dto.SignalResponse;
 import io.smallrye.mutiny.Uni;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
@@ -45,6 +52,7 @@ import org.jboss.logging.Logger;
 @Path("/api/v1/cases/{caseId}/signals")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Tag(name = "Signals", description = "Send signals to running cases")
 public class SignalResource {
 
   private static final Logger LOG = Logger.getLogger(SignalResource.class);
@@ -52,6 +60,20 @@ public class SignalResource {
   @Inject CaseHubRuntime caseHubRuntime;
 
   @POST
+  @Operation(summary = "Send signal to a case",
+             description = "Sends a signal value to a running case instance at the specified context path")
+  @Parameter(name = "caseId", description = "Case instance UUID", required = true)
+  @RequestBody(description = "Signal with context path and value",
+               required = true,
+               content = @Content(schema = @Schema(implementation = SendSignalRequest.class)))
+  @APIResponse(responseCode = "202", description = "Signal accepted",
+               content = @Content(schema = @Schema(implementation = SignalResponse.class)))
+  @APIResponse(responseCode = "400", description = "Invalid request",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+  @APIResponse(responseCode = "404", description = "Case not found",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+  @APIResponse(responseCode = "500", description = "Internal server error",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> sendSignal(
       @PathParam("caseId") UUID caseId, @Valid SendSignalRequest request) {
 
