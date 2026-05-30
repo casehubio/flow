@@ -16,9 +16,16 @@
 package io.casehub.flow.rest;
 
 import io.casehub.api.model.CaseDefinition;
+import io.casehub.flow.rest.dto.PagedResponse;
 import io.casehub.flow.rest.dto.ProblemDetail;
 import io.casehub.flow.service.CaseDefinitionService;
 import io.smallrye.mutiny.Uni;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.resteasy.reactive.RestQuery;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.DefaultValue;
@@ -49,6 +56,7 @@ import java.util.List;
  */
 @Path("/api/v1/case-definitions")
 @Produces(MediaType.APPLICATION_JSON)
+@Tag(name = "Case Definitions", description = "Query registered case definitions")
 public class CaseDefinitionResource {
 
   @Inject CaseDefinitionService caseDefinitionService;
@@ -61,6 +69,14 @@ public class CaseDefinitionResource {
    * @return paginated case definitions with metadata
    */
   @GET
+  @Operation(summary = "List all case definitions",
+             description = "Returns a paginated list of all registered case definitions")
+  @Parameter(name = "page", description = "Page number (1-indexed)", example = "1")
+  @Parameter(name = "size", description = "Page size (1-100)", example = "20")
+  @APIResponse(responseCode = "200", description = "Paginated list of case definitions",
+               content = @Content(schema = @Schema(implementation = PagedResponse.class)))
+  @APIResponse(responseCode = "400", description = "Invalid pagination parameters",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> listAll(
       @RestQuery @DefaultValue("1") Integer page, @RestQuery @DefaultValue("20") Integer size) {
     if (page < 1) {
@@ -100,6 +116,13 @@ public class CaseDefinitionResource {
    */
   @GET
   @Path("/{namespace}/{name}")
+  @Operation(summary = "Get definitions by namespace and name",
+             description = "Returns all versions of a case definition matching the namespace and name")
+  @Parameter(name = "namespace", description = "Case namespace", required = true, example = "acme")
+  @Parameter(name = "name", description = "Case name", required = true, example = "Order Processing")
+  @APIResponse(responseCode = "200", description = "List of matching case definitions")
+  @APIResponse(responseCode = "404", description = "No definitions found",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> getByNamespaceAndName(
       @PathParam("namespace") String namespace, @PathParam("name") String name) {
     // JAX-RS should decode path params automatically, but ensure it's decoded
@@ -134,6 +157,14 @@ public class CaseDefinitionResource {
    */
   @GET
   @Path("/{namespace}/{name}/{version}")
+  @Operation(summary = "Get definition by key",
+             description = "Returns a specific case definition by namespace, name, and version")
+  @Parameter(name = "namespace", description = "Case namespace", required = true, example = "acme")
+  @Parameter(name = "name", description = "Case name", required = true, example = "Order Processing")
+  @Parameter(name = "version", description = "Case version", required = true, example = "1.0.0")
+  @APIResponse(responseCode = "200", description = "Case definition found")
+  @APIResponse(responseCode = "404", description = "Definition not found",
+               content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> getByNamespaceAndNameAndVersion(
       @PathParam("namespace") String namespace,
       @PathParam("name") String name,
