@@ -16,6 +16,7 @@
 package io.casehub.flow.rest.dto;
 
 import java.util.UUID;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 /**
  * Response for signal acceptance.
@@ -24,4 +25,13 @@ import java.util.UUID;
  * @param status acceptance status ("accepted")
  * @param message human-readable message
  */
-public record SignalResponse(UUID caseId, String status, String message) {}
+@Schema(description = "Response after sending a signal")
+public record SignalResponse(
+    @Schema(description = "Case instance UUID",
+            example = "550e8400-e29b-41d4-a716-446655440000")
+    UUID caseId,
+    @Schema(description = "Signal delivery status", example = "accepted")
+    String status,
+    @Schema(description = "Human-readable status message",
+            example = "Signal delivered to case")
+    String message) {}

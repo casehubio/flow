@@ -16,6 +16,7 @@
 package io.casehub.flow.rest.dto;
 
 import java.util.List;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 /**
  * Generic paginated response wrapper.
@@ -27,5 +28,15 @@ import java.util.List;
  * @param totalPages total number of pages
  * @param <T> the type of elements in the page
  */
+@Schema(description = "Paginated response wrapper")
 public record PagedResponse<T>(
-    List<T> content, int page, int size, long totalElements, int totalPages) {}
+    @Schema(description = "Page content items")
+    List<T> content,
+    @Schema(description = "Current page number (1-indexed)", example = "1")
+    int page,
+    @Schema(description = "Page size", example = "20")
+    int size,
+    @Schema(description = "Total number of elements", example = "42")
+    long totalElements,
+    @Schema(description = "Total number of pages", example = "3")
+    int totalPages) {}

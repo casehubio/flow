@@ -15,8 +15,14 @@
  */
 package io.casehub.flow.rest.dto;
 
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+
 /**
  * Optional request body for case control operations.
  * Allows caller to provide audit trail information.
  */
-public record CaseControlRequest(String reason) {}
+@Schema(description = "Request body for case control operations")
+public record CaseControlRequest(
+    @Schema(description = "Optional reason for the operation", nullable = true,
+            example = "Maintenance window")
+    String reason) {}

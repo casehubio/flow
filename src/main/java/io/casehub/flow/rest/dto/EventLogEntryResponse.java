@@ -20,6 +20,7 @@ import io.casehub.api.model.event.CaseHubEventType;
 import io.casehub.api.model.event.EventStreamType;
 import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 /**
  * Event log entry response DTO.
@@ -33,9 +34,15 @@ import java.time.Instant;
  * @param payload event-specific data
  * @param metadata event metadata (traceId, etc.)
  */
+@Schema(description = "Single event log entry from case audit trail")
 public record EventLogEntryResponse(
+    @Schema(description = "Type of case event", required = true, example = "CASE_STARTED")
     @NotNull CaseHubEventType eventType,
+    @Schema(description = "Event stream type", required = true, example = "CASE")
     @NotNull EventStreamType streamType,
+    @Schema(description = "Event timestamp", required = true)
     @NotNull Instant timestamp,
+    @Schema(description = "Event payload data", nullable = true)
     JsonNode payload,
+    @Schema(description = "Event metadata", nullable = true)
     JsonNode metadata) {}
