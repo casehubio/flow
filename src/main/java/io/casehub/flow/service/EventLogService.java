@@ -21,6 +21,7 @@ import io.casehub.api.model.event.CaseHubEventType;
 import io.casehub.api.model.event.EventStreamType;
 import io.casehub.engine.common.spi.CaseInstanceRepository;
 import io.casehub.flow.exception.CaseInstanceNotFoundException;
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.flow.rest.dto.EventLogEntryResponse;
 import io.casehub.flow.rest.dto.PagedResponse;
 import io.smallrye.mutiny.Uni;
@@ -42,6 +43,7 @@ public class EventLogService {
 
   @Inject CaseHubRuntime caseHubRuntime;
   @Inject CaseInstanceRepository instanceRepository;
+  @Inject CurrentPrincipal currentPrincipal;
 
   /**
    * Get paginated and filtered event log for a case.
@@ -62,7 +64,7 @@ public class EventLogService {
 
     // Validate case exists first
     return instanceRepository
-        .findByUuid(caseId)
+        .findByUuid(caseId, currentPrincipal.tenancyId())
         .onItem()
         .ifNull()
         .failWith(() -> new CaseInstanceNotFoundException(caseId))

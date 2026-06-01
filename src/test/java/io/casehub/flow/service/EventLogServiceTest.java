@@ -33,6 +33,8 @@ import io.casehub.engine.common.internal.model.CaseInstance;
 import io.casehub.engine.common.spi.CaseInstanceRepository;
 import io.casehub.flow.rest.dto.EventLogEntryResponse;
 import io.casehub.flow.rest.dto.PagedResponse;
+import io.casehub.platform.api.identity.CurrentPrincipal;
+import io.casehub.platform.api.identity.TenancyConstants;
 import io.smallrye.mutiny.Uni;
 
 import java.time.Instant;
@@ -48,6 +50,7 @@ class EventLogServiceTest {
 
     private CaseHubRuntime runtime;
     private CaseInstanceRepository instanceRepository;
+    private CurrentPrincipal currentPrincipal;
     private EventLogService service;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -55,13 +58,16 @@ class EventLogServiceTest {
     void setUp() {
         runtime = mock(CaseHubRuntime.class);
         instanceRepository = mock(CaseInstanceRepository.class);
+        currentPrincipal = mock(CurrentPrincipal.class);
+        when(currentPrincipal.tenancyId()).thenReturn(TenancyConstants.DEFAULT_TENANT_ID);
         service = new EventLogService();
         service.caseHubRuntime = runtime;
         service.instanceRepository = instanceRepository;
+        service.currentPrincipal = currentPrincipal;
 
         // Mock instanceRepository to return a valid instance by default
         CaseInstance mockInstance = mock(CaseInstance.class);
-        when(instanceRepository.findByUuid(any(UUID.class)))
+        when(instanceRepository.findByUuid(any(UUID.class), any(String.class)))
             .thenReturn(Uni.createFrom().item(mockInstance));
     }
 
@@ -117,6 +123,20 @@ class EventLogServiceTest {
     void convertStreamTypes_withNullOrEmpty_returnsEmptySet() {
         assertThat(service.convertStreamTypes(null)).isEmpty();
         assertThat(service.convertStreamTypes(List.of())).isEmpty();
+    }
+
+    @Test
+    void getEventLog_passesCurrentPrincipalTenancyIdToRepository() {
+        UUID caseId = UUID.randomUUID();
+        String customTenancyId = "custom-tenant-42";
+        when(currentPrincipal.tenancyId()).thenReturn(customTenancyId);
+
+        when(runtime.eventLog(caseId))
+                .thenReturn(CompletableFuture.completedFuture(List.of()));
+
+        service.getEventLog(caseId, 1, 50, null, null).await().indefinitely();
+
+        verify(instanceRepository).findByUuid(caseId, customTenancyId);
     }
 
     @Test
