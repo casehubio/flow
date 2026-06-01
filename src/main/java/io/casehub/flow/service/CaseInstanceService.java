@@ -24,6 +24,7 @@ import io.casehub.flow.exception.CaseInstanceNotFoundException;
 import io.casehub.flow.exception.DefinitionNotFoundException;
 import io.casehub.flow.rest.dto.CaseInstanceResponse;
 import io.casehub.flow.rest.dto.StartCaseRequest;
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -48,6 +49,7 @@ public class CaseInstanceService {
   @Inject CaseDefinitionService definitionService;
   @Inject CaseInstanceRepository instanceRepository;
   @Inject CaseHubRuntime caseHubRuntime;
+  @Inject CurrentPrincipal currentPrincipal;
 
   /**
    * Start a new case instance.
@@ -82,7 +84,7 @@ public class CaseInstanceService {
         .failWith(() -> new CaseInstanceNotFoundException("Case started but UUID is null"))
 
         // 4. Fetch CaseInstance from repository
-        .flatMap(caseId -> instanceRepository.findByUuid(caseId))
+        .flatMap(caseId -> instanceRepository.findByUuid(caseId, currentPrincipal.tenancyId()))
         .onItem()
         .ifNull()
         .failWith(
@@ -102,7 +104,7 @@ public class CaseInstanceService {
    */
   public Uni<CaseInstanceResponse> getCaseInstance(UUID caseId) {
     return instanceRepository
-        .findByUuid(caseId)
+        .findByUuid(caseId, currentPrincipal.tenancyId())
         .onItem()
         .ifNull()
         .failWith(() -> new CaseInstanceNotFoundException(caseId))
