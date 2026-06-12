@@ -1,5 +1,7 @@
 # flow
 
+[![Build](https://github.com/casehubio/flow/actions/workflows/maven.yml/badge.svg?branch=main)](https://github.com/casehubio/flow/actions/workflows/maven.yml) [![Open PRs](https://img.shields.io/github/issues-pr/casehubio/flow)](https://github.com/casehubio/flow/pulls)
+
 This project uses Quarkus, the Supersonic Subatomic Java Framework.
 
 If you want to learn more about Quarkus, please visit its website: <https://quarkus.io/>.
