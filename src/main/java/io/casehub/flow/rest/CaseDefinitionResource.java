@@ -19,6 +19,11 @@ import io.casehub.api.model.CaseDefinition;
 import io.casehub.flow.rest.dto.PagedResponse;
 import io.casehub.flow.rest.dto.ProblemDetail;
 import io.casehub.flow.service.CaseDefinitionService;
+import io.casehub.platform.api.acl.AccessControlProvider;
+import io.casehub.platform.api.acl.AccessDeniedException;
+import io.casehub.platform.api.acl.AclAction;
+import io.casehub.platform.api.acl.AclResourceType;
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.smallrye.mutiny.Uni;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
@@ -60,6 +65,8 @@ import java.util.List;
 public class CaseDefinitionResource {
 
   @Inject CaseDefinitionService caseDefinitionService;
+  @Inject AccessControlProvider acl;
+  @Inject CurrentPrincipal currentPrincipal;
 
   /**
    * List all registered case definitions with pagination.
@@ -128,6 +135,12 @@ public class CaseDefinitionResource {
     // JAX-RS should decode path params automatically, but ensure it's decoded
     String decodedName = URLDecoder.decode(name, StandardCharsets.UTF_8);
     String decodedNamespace = URLDecoder.decode(namespace, StandardCharsets.UTF_8);
+
+    String resourceId = AclResourceType.CASE_DEFINITION + ":" + decodedNamespace + "/" + decodedName;
+    if (!acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.READ)) {
+      throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.READ);
+    }
+
     return caseDefinitionService
         .findByNamespaceAndName(decodedNamespace, decodedName)
         .map(
@@ -173,6 +186,12 @@ public class CaseDefinitionResource {
     String decodedName = URLDecoder.decode(name, StandardCharsets.UTF_8);
     String decodedNamespace = URLDecoder.decode(namespace, StandardCharsets.UTF_8);
     String decodedVersion = URLDecoder.decode(version, StandardCharsets.UTF_8);
+
+    String resourceId = AclResourceType.CASE_DEFINITION + ":" + decodedNamespace + "/" + decodedName;
+    if (!acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.READ)) {
+      throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.READ);
+    }
+
     return caseDefinitionService
         .findByKey(decodedNamespace, decodedName, decodedVersion)
         .map(

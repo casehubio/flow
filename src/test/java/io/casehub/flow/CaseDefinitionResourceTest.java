@@ -30,6 +30,7 @@ import io.casehub.api.model.GoalExpression;
 import io.casehub.api.model.GoalKind;
 import io.casehub.api.model.Milestone;
 import io.casehub.api.model.Worker;
+import io.casehub.api.model.WorkerResult;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -321,7 +322,7 @@ class CaseDefinitionResourceTest {
                   .name("approver-worker")
                   .description("Approves documents")
                   .capabilities(approveCapability)
-                  .function(input -> Map.of("approved", true, "status", "approved"))
+                  .function(input -> WorkerResult.of(Map.of("approved", true, "status", "approved")))
                   .build())
           .bindings(
               Binding.builder()
@@ -362,7 +363,7 @@ class CaseDefinitionResourceTest {
               Worker.builder()
                   .name("approver-worker-v2")
                   .capabilities(approveCapability)
-                  .function(input -> Map.of("approved", true, "status", "approved"))
+                  .function(input -> WorkerResult.of(Map.of("approved", true, "status", "approved")))
                   .build())
           .bindings(
               Binding.builder()
@@ -400,7 +401,7 @@ class CaseDefinitionResourceTest {
               Worker.builder()
                   .name("invoice-processor")
                   .capabilities(processCapability)
-                  .function(input -> Map.of("processed", true))
+                  .function(input -> WorkerResult.of(Map.of("processed", true)))
                   .build())
           .bindings(
               Binding.builder()
@@ -438,7 +439,7 @@ class CaseDefinitionResourceTest {
               Worker.builder()
                   .name("document-classifier")
                   .capabilities(classifyCapability)
-                  .function(input -> Map.of("classified", true))
+                  .function(input -> WorkerResult.of(Map.of("classified", true)))
                   .build())
           .bindings(
               Binding.builder()
