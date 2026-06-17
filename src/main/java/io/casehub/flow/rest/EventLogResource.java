@@ -20,6 +20,11 @@ import io.casehub.flow.exception.ValidationException;
 import io.casehub.flow.rest.dto.PagedResponse;
 import io.casehub.flow.rest.dto.ProblemDetail;
 import io.casehub.flow.service.EventLogService;
+import io.casehub.platform.api.acl.AccessControlProvider;
+import io.casehub.platform.api.acl.AccessDeniedException;
+import io.casehub.platform.api.acl.AclAction;
+import io.casehub.platform.api.acl.AclResourceType;
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.smallrye.mutiny.Uni;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
@@ -91,6 +96,8 @@ public class EventLogResource {
   private static final int MAX_PAGE_SIZE = 1000;
 
   @Inject EventLogService eventLogService;
+  @Inject AccessControlProvider acl;
+  @Inject CurrentPrincipal currentPrincipal;
 
   /**
    * Get event log for a case.
@@ -126,6 +133,11 @@ public class EventLogResource {
       @QueryParam("size") @DefaultValue("50") int size,
       @QueryParam("eventType") List<String> eventType,
       @QueryParam("streamType") List<String> streamType) {
+
+    String resourceId = AclResourceType.CASE + ":" + caseId;
+    if (!acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.READ)) {
+      throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.READ);
+    }
 
     return Uni.createFrom()
         .item(

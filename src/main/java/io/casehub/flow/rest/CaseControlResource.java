@@ -19,6 +19,11 @@ import io.casehub.api.engine.CaseHubRuntime;
 import io.casehub.flow.rest.dto.CaseControlRequest;
 import io.casehub.flow.rest.dto.CaseControlResponse;
 import io.casehub.flow.rest.dto.ProblemDetail;
+import io.casehub.platform.api.acl.AccessControlProvider;
+import io.casehub.platform.api.acl.AccessDeniedException;
+import io.casehub.platform.api.acl.AclAction;
+import io.casehub.platform.api.acl.AclResourceType;
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.smallrye.mutiny.Uni;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
@@ -57,6 +62,8 @@ public class CaseControlResource {
   private static final Logger LOG = Logger.getLogger(CaseControlResource.class);
 
   @Inject CaseHubRuntime caseHubRuntime;
+  @Inject AccessControlProvider acl;
+  @Inject CurrentPrincipal currentPrincipal;
 
   /**
    * Suspend case execution.
@@ -80,6 +87,11 @@ public class CaseControlResource {
                content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> suspend(
       @PathParam("caseId") UUID caseId, CaseControlRequest request) {
+    String resourceId = AclResourceType.CASE + ":" + caseId;
+    if (!acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.WRITE)) {
+      throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.WRITE);
+    }
+
     return Uni.createFrom()
         .emitter(
             em -> {
@@ -147,6 +159,11 @@ public class CaseControlResource {
   @APIResponse(responseCode = "500", description = "Internal server error",
                content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> resume(@PathParam("caseId") UUID caseId, CaseControlRequest request) {
+    String resourceId = AclResourceType.CASE + ":" + caseId;
+    if (!acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.WRITE)) {
+      throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.WRITE);
+    }
+
     return Uni.createFrom()
         .emitter(
             em -> {
@@ -214,6 +231,11 @@ public class CaseControlResource {
   @APIResponse(responseCode = "500", description = "Internal server error",
                content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> cancel(@PathParam("caseId") UUID caseId, CaseControlRequest request) {
+    String resourceId = AclResourceType.CASE + ":" + caseId;
+    if (!acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.ADMIN)) {
+      throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.ADMIN);
+    }
+
     return Uni.createFrom()
         .emitter(
             em -> {

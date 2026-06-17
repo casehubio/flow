@@ -21,6 +21,11 @@ import io.casehub.flow.rest.dto.CaseInstanceResponse;
 import io.casehub.flow.rest.dto.ProblemDetail;
 import io.casehub.flow.rest.dto.StartCaseRequest;
 import io.casehub.flow.service.CaseInstanceService;
+import io.casehub.platform.api.acl.AccessControlProvider;
+import io.casehub.platform.api.acl.AccessDeniedException;
+import io.casehub.platform.api.acl.AclAction;
+import io.casehub.platform.api.acl.AclResourceType;
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.smallrye.mutiny.Uni;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
@@ -59,6 +64,8 @@ import java.util.UUID;
 public class CaseInstanceResource {
 
   @Inject CaseInstanceService caseInstanceService;
+  @Inject AccessControlProvider acl;
+  @Inject CurrentPrincipal currentPrincipal;
 
   /**
    * Start a new case instance.
@@ -91,6 +98,12 @@ public class CaseInstanceResource {
                       new ProblemDetail(
                           "Invalid request", 400, "Request body and definition are required"))
                   .build());
+    }
+
+    String resourceId = AclResourceType.CASE_DEFINITION + ":"
+        + request.definition().namespace() + "/" + request.definition().name();
+    if (!acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.WRITE)) {
+      throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.WRITE);
     }
 
     return caseInstanceService
@@ -134,6 +147,11 @@ public class CaseInstanceResource {
   @APIResponse(responseCode = "500", description = "Internal server error",
                content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> getCaseInstance(@PathParam("caseId") UUID caseId) {
+    String resourceId = AclResourceType.CASE + ":" + caseId;
+    if (!acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.READ)) {
+      throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.READ);
+    }
+
     return caseInstanceService
         .getCaseInstance(caseId)
         .map(response -> Response.ok(response).build())
@@ -172,6 +190,11 @@ public class CaseInstanceResource {
   @APIResponse(responseCode = "500", description = "Internal server error",
                content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> getContext(@PathParam("caseId") UUID caseId) {
+    String resourceId = AclResourceType.CASE + ":" + caseId;
+    if (!acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.READ)) {
+      throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.READ);
+    }
+
     return caseInstanceService
         .getCaseContext(caseId)
         .map(context -> Response.ok(context).build())
@@ -213,6 +236,11 @@ public class CaseInstanceResource {
   @APIResponse(responseCode = "500", description = "Internal server error",
                content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> getContextPath(@PathParam("caseId") UUID caseId, @PathParam("path") String path) {
+    String resourceId = AclResourceType.CASE + ":" + caseId;
+    if (!acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.READ)) {
+      throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.READ);
+    }
+
     return caseInstanceService
         .getContextPath(caseId, path)
         .map(value -> Response.ok(value).build())

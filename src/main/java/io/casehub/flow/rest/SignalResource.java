@@ -20,6 +20,11 @@ import io.casehub.flow.exception.CaseInstanceNotFoundException;
 import io.casehub.flow.rest.dto.ProblemDetail;
 import io.casehub.flow.rest.dto.SendSignalRequest;
 import io.casehub.flow.rest.dto.SignalResponse;
+import io.casehub.platform.api.acl.AccessControlProvider;
+import io.casehub.platform.api.acl.AccessDeniedException;
+import io.casehub.platform.api.acl.AclAction;
+import io.casehub.platform.api.acl.AclResourceType;
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.smallrye.mutiny.Uni;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
@@ -58,6 +63,8 @@ public class SignalResource {
   private static final Logger LOG = Logger.getLogger(SignalResource.class);
 
   @Inject CaseHubRuntime caseHubRuntime;
+  @Inject AccessControlProvider acl;
+  @Inject CurrentPrincipal currentPrincipal;
 
   @POST
   @Operation(summary = "Send signal to a case",
@@ -76,6 +83,11 @@ public class SignalResource {
                content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> sendSignal(
       @PathParam("caseId") UUID caseId, @Valid SendSignalRequest request) {
+
+    String resourceId = AclResourceType.CASE + ":" + caseId;
+    if (!acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.WRITE)) {
+      throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.WRITE);
+    }
 
     if (request == null) {
       return Uni.createFrom()
