@@ -135,22 +135,15 @@ public class EventLogResource {
       @QueryParam("streamType") List<String> streamType) {
 
     String resourceId = AclResourceType.CASE + ":" + caseId;
-    if (!acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.READ)) {
-      throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.READ);
-    }
 
-    return Uni.createFrom()
-        .item(
-            () -> {
-              // Validate parameters (throws ValidationException on failure)
-              validatePaginationParams(page, size);
-              eventLogService.convertEventTypes(eventType); // throws IllegalArgumentException
-              eventLogService.convertStreamTypes(streamType); // throws IllegalArgumentException
-              return true;
-            })
-        .flatMap(
-            ignored ->
-                eventLogService.getEventLog(caseId, page, size, eventType, streamType))
+    return Uni.createFrom().completionStage(acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.READ))
+        .flatMap(allowed -> {
+          if (!allowed) throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.READ);
+          validatePaginationParams(page, size);
+          eventLogService.convertEventTypes(eventType);
+          eventLogService.convertStreamTypes(streamType);
+          return eventLogService.getEventLog(caseId, page, size, eventType, streamType);
+        })
         .map(pagedResponse -> Response.ok(pagedResponse).build())
         .onFailure(ValidationException.class)
         .recoverWithItem(
@@ -181,7 +174,7 @@ public class EventLogResource {
                       new ProblemDetail("Case instance not found", 404, ex.getMessage()))
                   .build();
             })
-        .onFailure()
+        .onFailure(ex -> !(ex instanceof AccessDeniedException))
         .recoverWithItem(
             ex -> {
               LOG.errorf(ex, "Failed to retrieve event log for case %s", caseId);

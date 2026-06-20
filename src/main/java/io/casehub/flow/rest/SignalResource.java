@@ -85,9 +85,6 @@ public class SignalResource {
       @PathParam("caseId") UUID caseId, @Valid SendSignalRequest request) {
 
     String resourceId = AclResourceType.CASE + ":" + caseId;
-    if (!acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.WRITE)) {
-      throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.WRITE);
-    }
 
     if (request == null) {
       return Uni.createFrom()
@@ -101,9 +98,11 @@ public class SignalResource {
                   .build());
     }
 
-    // Validate case exists and send signal
-    return Uni.createFrom()
-        .completionStage(() -> caseHubRuntime.query(caseId, ".", Object.class))
+    return Uni.createFrom().completionStage(acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.WRITE))
+        .flatMap(allowed -> {
+          if (!allowed) throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.WRITE);
+          return Uni.createFrom().completionStage(() -> caseHubRuntime.query(caseId, ".", Object.class));
+        })
         .map(
             ignored -> {
               caseHubRuntime.signal(caseId, request.path(), request.value());
@@ -118,7 +117,7 @@ public class SignalResource {
                   .entity(new ProblemDetail("Case not found", 404, ex.getMessage()))
                   .build();
             })
-        .onFailure(RuntimeException.class)
+        .onFailure(ex -> ex instanceof RuntimeException && !(ex instanceof AccessDeniedException))
         .recoverWithUni(
             ex -> {
               if (ex.getMessage() != null && ex.getMessage().contains("not found")) {
