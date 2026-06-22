@@ -137,12 +137,12 @@ public class CaseDefinitionResource {
     String decodedNamespace = URLDecoder.decode(namespace, StandardCharsets.UTF_8);
 
     String resourceId = AclResourceType.CASE_DEFINITION + ":" + decodedNamespace + "/" + decodedName;
-    if (!acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.READ)) {
-      throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.READ);
-    }
 
-    return caseDefinitionService
-        .findByNamespaceAndName(decodedNamespace, decodedName)
+    return Uni.createFrom().completionStage(acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.READ))
+        .flatMap(allowed -> {
+          if (!allowed) throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.READ);
+          return caseDefinitionService.findByNamespaceAndName(decodedNamespace, decodedName);
+        })
         .map(
             definitions -> {
               if (definitions.isEmpty()) {
@@ -188,12 +188,12 @@ public class CaseDefinitionResource {
     String decodedVersion = URLDecoder.decode(version, StandardCharsets.UTF_8);
 
     String resourceId = AclResourceType.CASE_DEFINITION + ":" + decodedNamespace + "/" + decodedName;
-    if (!acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.READ)) {
-      throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.READ);
-    }
 
-    return caseDefinitionService
-        .findByKey(decodedNamespace, decodedName, decodedVersion)
+    return Uni.createFrom().completionStage(acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.READ))
+        .flatMap(allowed -> {
+          if (!allowed) throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.READ);
+          return caseDefinitionService.findByKey(decodedNamespace, decodedName, decodedVersion);
+        })
         .map(
             definition -> {
               if (definition == null) {

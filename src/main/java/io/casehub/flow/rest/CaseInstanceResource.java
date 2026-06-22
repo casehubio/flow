@@ -102,12 +102,12 @@ public class CaseInstanceResource {
 
     String resourceId = AclResourceType.CASE_DEFINITION + ":"
         + request.definition().namespace() + "/" + request.definition().name();
-    if (!acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.WRITE)) {
-      throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.WRITE);
-    }
 
-    return caseInstanceService
-        .startCase(request)
+    return Uni.createFrom().completionStage(acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.WRITE))
+        .flatMap(allowed -> {
+          if (!allowed) throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.WRITE);
+          return caseInstanceService.startCase(request);
+        })
         .map(response -> Response.ok(response).build())
         .onFailure(DefinitionNotFoundException.class)
         .recoverWithItem(
@@ -117,7 +117,7 @@ public class CaseInstanceResource {
                         new ProblemDetail(
                             "Case definition not found", 404, ex.getMessage()))
                     .build())
-        .onFailure()
+        .onFailure(ex -> !(ex instanceof AccessDeniedException))
         .recoverWithItem(
             ex ->
                 Response.status(500)
@@ -148,12 +148,12 @@ public class CaseInstanceResource {
                content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> getCaseInstance(@PathParam("caseId") UUID caseId) {
     String resourceId = AclResourceType.CASE + ":" + caseId;
-    if (!acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.READ)) {
-      throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.READ);
-    }
 
-    return caseInstanceService
-        .getCaseInstance(caseId)
+    return Uni.createFrom().completionStage(acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.READ))
+        .flatMap(allowed -> {
+          if (!allowed) throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.READ);
+          return caseInstanceService.getCaseInstance(caseId);
+        })
         .map(response -> Response.ok(response).build())
         .onFailure(CaseInstanceNotFoundException.class)
         .recoverWithItem(
@@ -163,7 +163,7 @@ public class CaseInstanceResource {
                         new ProblemDetail(
                             "Case instance not found", 404, ex.getMessage()))
                     .build())
-        .onFailure()
+        .onFailure(ex -> !(ex instanceof AccessDeniedException))
         .recoverWithItem(
             ex ->
                 Response.status(500)
@@ -191,12 +191,12 @@ public class CaseInstanceResource {
                content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> getContext(@PathParam("caseId") UUID caseId) {
     String resourceId = AclResourceType.CASE + ":" + caseId;
-    if (!acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.READ)) {
-      throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.READ);
-    }
 
-    return caseInstanceService
-        .getCaseContext(caseId)
+    return Uni.createFrom().completionStage(acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.READ))
+        .flatMap(allowed -> {
+          if (!allowed) throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.READ);
+          return caseInstanceService.getCaseContext(caseId);
+        })
         .map(context -> Response.ok(context).build())
         .onFailure(CaseInstanceNotFoundException.class)
         .recoverWithItem(
@@ -206,7 +206,7 @@ public class CaseInstanceResource {
                         new ProblemDetail(
                             "Case instance not found", 404, ex.getMessage()))
                     .build())
-        .onFailure()
+        .onFailure(ex -> !(ex instanceof AccessDeniedException))
         .recoverWithItem(
             ex ->
                 Response.status(500)
@@ -237,12 +237,12 @@ public class CaseInstanceResource {
                content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> getContextPath(@PathParam("caseId") UUID caseId, @PathParam("path") String path) {
     String resourceId = AclResourceType.CASE + ":" + caseId;
-    if (!acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.READ)) {
-      throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.READ);
-    }
 
-    return caseInstanceService
-        .getContextPath(caseId, path)
+    return Uni.createFrom().completionStage(acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.READ))
+        .flatMap(allowed -> {
+          if (!allowed) throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.READ);
+          return caseInstanceService.getContextPath(caseId, path);
+        })
         .map(value -> Response.ok(value).build())
         .onFailure(CaseInstanceNotFoundException.class)
         .recoverWithItem(
@@ -252,7 +252,7 @@ public class CaseInstanceResource {
                         new ProblemDetail(
                             "Case instance not found", 404, ex.getMessage()))
                     .build())
-        .onFailure()
+        .onFailure(ex -> !(ex instanceof AccessDeniedException))
         .recoverWithItem(
             ex ->
                 Response.status(500)

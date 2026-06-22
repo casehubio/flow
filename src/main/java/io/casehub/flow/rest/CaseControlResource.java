@@ -88,25 +88,25 @@ public class CaseControlResource {
   public Uni<Response> suspend(
       @PathParam("caseId") UUID caseId, CaseControlRequest request) {
     String resourceId = AclResourceType.CASE + ":" + caseId;
-    if (!acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.WRITE)) {
-      throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.WRITE);
-    }
 
-    return Uni.createFrom()
-        .emitter(
-            em -> {
-              try {
-                if (request != null && request.reason() != null) {
-                  LOG.infof("Suspending case %s, reason: %s", caseId, request.reason());
+    return Uni.createFrom().completionStage(acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.WRITE))
+        .flatMap(allowed -> {
+          if (!allowed) throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.WRITE);
+          return Uni.createFrom().emitter(
+              em -> {
+                try {
+                  if (request != null && request.reason() != null) {
+                    LOG.infof("Suspending case %s, reason: %s", caseId, request.reason());
+                  }
+                  caseHubRuntime.suspendCase(caseId);
+                  em.complete(
+                      new CaseControlResponse(
+                          caseId, "suspend", "accepted", "Case suspension queued for processing"));
+                } catch (Exception e) {
+                  em.fail(e);
                 }
-                caseHubRuntime.suspendCase(caseId);
-                em.complete(
-                    new CaseControlResponse(
-                        caseId, "suspend", "accepted", "Case suspension queued for processing"));
-              } catch (Exception e) {
-                em.fail(e);
-              }
-            })
+              });
+        })
         .map(response -> Response.status(202).entity(response).build())
         .onFailure(IllegalArgumentException.class)
         .recoverWithItem(
@@ -124,7 +124,7 @@ public class CaseControlResource {
                   .entity(new ProblemDetail("Invalid state transition", 409, ex.getMessage()))
                   .build();
             })
-        .onFailure()
+        .onFailure(ex -> !(ex instanceof AccessDeniedException))
         .recoverWithItem(
             ex -> {
               LOG.errorf(ex, "Failed to suspend case %s", caseId);
@@ -160,25 +160,25 @@ public class CaseControlResource {
                content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> resume(@PathParam("caseId") UUID caseId, CaseControlRequest request) {
     String resourceId = AclResourceType.CASE + ":" + caseId;
-    if (!acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.WRITE)) {
-      throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.WRITE);
-    }
 
-    return Uni.createFrom()
-        .emitter(
-            em -> {
-              try {
-                if (request != null && request.reason() != null) {
-                  LOG.infof("Resuming case %s, reason: %s", caseId, request.reason());
+    return Uni.createFrom().completionStage(acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.WRITE))
+        .flatMap(allowed -> {
+          if (!allowed) throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.WRITE);
+          return Uni.createFrom().emitter(
+              em -> {
+                try {
+                  if (request != null && request.reason() != null) {
+                    LOG.infof("Resuming case %s, reason: %s", caseId, request.reason());
+                  }
+                  caseHubRuntime.resumeCase(caseId);
+                  em.complete(
+                      new CaseControlResponse(
+                          caseId, "resume", "accepted", "Case resumption queued for processing"));
+                } catch (Exception e) {
+                  em.fail(e);
                 }
-                caseHubRuntime.resumeCase(caseId);
-                em.complete(
-                    new CaseControlResponse(
-                        caseId, "resume", "accepted", "Case resumption queued for processing"));
-              } catch (Exception e) {
-                em.fail(e);
-              }
-            })
+              });
+        })
         .map(response -> Response.status(202).entity(response).build())
         .onFailure(IllegalArgumentException.class)
         .recoverWithItem(
@@ -196,7 +196,7 @@ public class CaseControlResource {
                   .entity(new ProblemDetail("Invalid state transition", 409, ex.getMessage()))
                   .build();
             })
-        .onFailure()
+        .onFailure(ex -> !(ex instanceof AccessDeniedException))
         .recoverWithItem(
             ex -> {
               LOG.errorf(ex, "Failed to resume case %s", caseId);
@@ -232,25 +232,25 @@ public class CaseControlResource {
                content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
   public Uni<Response> cancel(@PathParam("caseId") UUID caseId, CaseControlRequest request) {
     String resourceId = AclResourceType.CASE + ":" + caseId;
-    if (!acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.ADMIN)) {
-      throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.ADMIN);
-    }
 
-    return Uni.createFrom()
-        .emitter(
-            em -> {
-              try {
-                if (request != null && request.reason() != null) {
-                  LOG.infof("Cancelling case %s, reason: %s", caseId, request.reason());
+    return Uni.createFrom().completionStage(acl.canAccess(currentPrincipal.actorId(), resourceId, AclAction.ADMIN))
+        .flatMap(allowed -> {
+          if (!allowed) throw new AccessDeniedException(currentPrincipal.actorId(), resourceId, AclAction.ADMIN);
+          return Uni.createFrom().emitter(
+              em -> {
+                try {
+                  if (request != null && request.reason() != null) {
+                    LOG.infof("Cancelling case %s, reason: %s", caseId, request.reason());
+                  }
+                  caseHubRuntime.cancelCase(caseId);
+                  em.complete(
+                      new CaseControlResponse(
+                          caseId, "cancel", "accepted", "Case cancellation queued for processing"));
+                } catch (Exception e) {
+                  em.fail(e);
                 }
-                caseHubRuntime.cancelCase(caseId);
-                em.complete(
-                    new CaseControlResponse(
-                        caseId, "cancel", "accepted", "Case cancellation queued for processing"));
-              } catch (Exception e) {
-                em.fail(e);
-              }
-            })
+              });
+        })
         .map(response -> Response.status(202).entity(response).build())
         .onFailure(IllegalArgumentException.class)
         .recoverWithItem(
@@ -268,7 +268,7 @@ public class CaseControlResource {
                   .entity(new ProblemDetail("Invalid state transition", 409, ex.getMessage()))
                   .build();
             })
-        .onFailure()
+        .onFailure(ex -> !(ex instanceof AccessDeniedException))
         .recoverWithItem(
             ex -> {
               LOG.errorf(ex, "Failed to cancel case %s", caseId);
