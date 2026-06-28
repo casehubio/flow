@@ -1,8 +1,58 @@
 # CLAUDE.md
 
+**Name:** scaffold
+
 ## Project Type
 
 **Type:** java
+
+---
+
+## Repository Role
+
+Deployable microservice for running CaseHub's goal-driven coordination engine — shared context, autonomous workers, milestones, goals, and event-driven execution. Provides a standalone Quarkus application with REST endpoints wrapping `casehub-engine`.
+
+**GitHub:** [mdproctor/scaffold](https://github.com/mdproctor/scaffold)
+**Tier:** Integration (pending platform coherence analysis — see casehubio/parent#78)
+
+---
+
+## Build Commands
+
+```bash
+# Build and install
+mvn --batch-mode install
+
+# Skip tests
+mvn --batch-mode install -DskipTests
+```
+
+---
+
+## Work Tracking
+
+**Issue tracking:** enabled
+
+All implementation work must be linked to a GitHub issue:
+- Before starting implementation, create an epic + child issues (or confirm an existing issue)
+- All commits reference an issue: `Refs #N` (work in progress) or `Closes #N` (completes the issue)
+- When staged changes span multiple concerns, split into separate commits with separate issue references
+
+**Automatic behaviors:**
+- Phase 1 (Pre-Implementation): Create epic + child issues before coding begins
+- Phase 2 (Task Intake): Detect cross-cutting concerns and suggest breaking into separate issues
+- Phase 3 (Pre-Commit): Verify issue linkage; suggest commit splits when staged changes span multiple concerns
+
+**Repository:** mdproctor/scaffold
+
+---
+
+## Development Workflow
+
+Before designing: `superpowers:brainstorming`
+Before implementing: `superpowers:test-driven-development`
+For all Java work: `java-dev`
+Before committing: `superpowers:requesting-code-review`
 
 ---
 
@@ -32,6 +82,32 @@ The protocol asks: Does this already exist elsewhere? Is this the right repo for
 ```
 https://raw.githubusercontent.com/casehubio/parent/main/docs/PLATFORM.md
 ```
+
+**Other repo deep-dives** (fetch the relevant ones when your implementation touches their domain):
+- casehub-engine: `https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/casehub-engine.md`
+- casehub-ledger: `https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/casehub-ledger.md`
+- casehub-work: `https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/casehub-work.md`
+- casehub-qhorus: `https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/casehub-qhorus.md`
+
+---
+
+## Ecosystem Conventions
+
+All casehubio projects align on these conventions:
+
+**Quarkus version:** `version.quarkus.platform` in root `pom.xml`, currently `3.32.2`. All ecosystem projects must match. When bumping, bump all projects together.
+
+**GitHub Packages — dependency resolution:** Root `pom.xml` has `<repositories>` with `id=github` pointing to `https://maven.pkg.github.com/casehubio/*`. CI uses `server-id: github` + `GITHUB_TOKEN` in `actions/setup-java`.
+
+---
+
+## IntelliJ MCP Tools
+
+Two IntelliJ MCP servers are available (`mcp__intellij__*` and `mcp__intellij-index__*`).
+Before using Bash tools, check whether the operation can be performed via IntelliJ — it is
+often more correct, faster, and less error-prone (symbol lookup, rename refactoring, diagnostics,
+file search). Verify both are responsive at session start; stop and report to the user if either
+is unavailable.
 
 ## Writing Style Guide
 
