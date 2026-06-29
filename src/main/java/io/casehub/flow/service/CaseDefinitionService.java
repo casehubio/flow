@@ -213,11 +213,13 @@ public class CaseDefinitionService {
     private CaseMetaModel toCaseMetaModel(CaseMetaModelEntity entity) {
         CaseMetaModel metaModel = new CaseMetaModel();
         metaModel.setId(entity.id);
+        metaModel.tenancyId = entity.tenancyId;
         metaModel.setName(entity.name);
         metaModel.setNamespace(entity.namespace);
         metaModel.setVersion(entity.version);
         metaModel.setTitle(entity.title);
         metaModel.setDsl(entity.dsl);
+        metaModel.setDefinition(entity.definition);
         metaModel.setCreatedAt(entity.createdAt);
         return metaModel;
     }

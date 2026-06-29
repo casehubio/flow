@@ -15,30 +15,13 @@
  */
 package io.casehub.flow.loader;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import io.casehub.api.model.AllOfGoalExpression;
-import io.casehub.api.model.AnyOfGoalExpression;
-import io.casehub.api.model.Binding;
-import io.casehub.api.model.Capability;
 import io.casehub.api.model.CaseDefinition;
-import io.casehub.api.model.ContextChangeTrigger;
-import io.casehub.api.model.Goal;
-import io.casehub.api.model.GoalBasedCompletion;
-import io.casehub.api.model.GoalExpression;
-import io.casehub.api.model.GoalKind;
-import io.casehub.api.model.Milestone;
-import io.casehub.api.model.Trigger;
-import io.casehub.api.model.Worker;
-import io.casehub.api.model.evaluator.JQExpressionEvaluator;
+import io.casehub.api.model.converter.CaseDefinitionYamlMapper;
 import io.casehub.engine.common.spi.CaseDefinitionRegistry;
-import io.casehub.model.CaseCompletion;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -51,12 +34,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.jboss.logging.Logger;
 
 /**
@@ -69,282 +48,96 @@ import org.jboss.logging.Logger;
  *   <li>src/main/resources/cases/
  * </ul>
  *
- * <p>YAML definitions are converted to {@link CaseDefinition} and registered via {@link
- * CaseDefinitionRegistry}.
+ * <p>YAML definitions are converted to {@link CaseDefinition} via {@link CaseDefinitionYamlMapper}
+ * and registered via {@link CaseDefinitionRegistry}.
  */
 @ApplicationScoped
 public class YamlCaseDefinitionLoader {
 
-    private static final Logger LOG = Logger.getLogger(YamlCaseDefinitionLoader.class);
-    private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
-    private static final String[] SCAN_PATHS = {"casehub", "cases"};
+  private static final Logger LOG = Logger.getLogger(YamlCaseDefinitionLoader.class);
+  private static final String[] SCAN_PATHS = {"casehub", "cases"};
 
-    @Inject
-    CaseDefinitionRegistry caseDefinitionRegistry;
+  @Inject CaseDefinitionRegistry caseDefinitionRegistry;
 
-    void onStart(@Observes StartupEvent event) {
-        LOG.info("Scanning classpath for YAML case definitions...");
+  void onStart(@Observes StartupEvent event) {
+    LOG.info("Scanning classpath for YAML case definitions...");
 
-        int count = 0;
-        for (String scanPath : SCAN_PATHS) {
-            count += scanAndRegister(scanPath);
+    int count = 0;
+    for (String scanPath : SCAN_PATHS) {
+      count += scanAndRegister(scanPath);
+    }
+    LOG.infof("Loaded %d YAML case definition(s)", count);
+  }
+
+  private int scanAndRegister(String resourcePath) {
+    int count = 0;
+    try {
+      ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+      URL resourceUrl = classLoader.getResource(resourcePath);
+
+      if (resourceUrl == null) {
+        LOG.debugf("No resources found at path: %s", resourcePath);
+        return 0;
+      }
+
+      URI uri = resourceUrl.toURI();
+
+      Path path;
+      FileSystem fileSystem = null;
+
+      if (uri.getScheme().equals("jar")) {
+        fileSystem = FileSystems.newFileSystem(uri, Collections.emptyMap());
+        path = fileSystem.getPath(resourcePath);
+      } else {
+        path = Paths.get(uri);
+      }
+
+      try (Stream<Path> paths = Files.walk(path)) {
+        List<Path> yamlFiles =
+            paths
+                .filter(Files::isRegularFile)
+                .filter(p -> p.toString().endsWith(".yaml") || p.toString().endsWith(".yml"))
+                .toList();
+
+        for (Path yamlFile : yamlFiles) {
+          try {
+            String relativePath = resourcePath + "/" + path.relativize(yamlFile);
+            loadAndRegister(relativePath);
+            count++;
+          } catch (Exception e) {
+            LOG.errorf(e, "Failed to load YAML definition from %s", yamlFile);
+          }
         }
-        LOG.infof("Loaded %d YAML case definition(s)", count);
+      }
+
+      if (fileSystem != null) {
+        fileSystem.close();
+      }
+    } catch (IOException | URISyntaxException e) {
+      LOG.debugf("No YAML definitions found in %s", resourcePath);
     }
 
-    private int scanAndRegister(String resourcePath) {
-        int count = 0;
-        try {
-            ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-            URL resourceUrl = classLoader.getResource(resourcePath);
+    return count;
+  }
 
-            if (resourceUrl == null) {
-                LOG.debugf("No resources found at path: %s", resourcePath);
-                return 0;
-            }
+  private void loadAndRegister(String resourcePath) throws IOException {
+    try (InputStream is =
+        Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath)) {
+      if (is == null) {
+        LOG.warnf("Resource %s not found on classpath", resourcePath);
+        return;
+      }
 
-            URI uri = resourceUrl.toURI();
+      CaseDefinition definition = CaseDefinitionYamlMapper.load(is);
 
-            Path path;
-            FileSystem fileSystem = null;
+      caseDefinitionRegistry
+          .registerCaseDefinition(definition)
+          .await()
+          .atMost(Duration.ofSeconds(10));
 
-            if (uri.getScheme().equals("jar")) {
-                fileSystem = FileSystems.newFileSystem(uri, Collections.emptyMap());
-                path = fileSystem.getPath(resourcePath);
-            } else {
-                path = Paths.get(uri);
-            }
-
-            try (Stream<Path> paths = Files.walk(path)) {
-                List<Path> yamlFiles =
-                        paths
-                                .filter(Files::isRegularFile)
-                                .filter(p -> p.toString().endsWith(".yaml") || p.toString().endsWith(".yml"))
-                                .toList();
-
-                for (Path yamlFile : yamlFiles) {
-                    String relativePath = resourcePath + "/" + path.relativize(yamlFile);
-                    try {
-                        loadAndRegister(relativePath);
-                        count++;
-                    } catch (Exception e) {
-                        throw new RuntimeException("Failed to load YAML case definition from " + yamlFile, e);
-                    }
-                }
-            }
-
-            if (fileSystem != null) {
-                fileSystem.close();
-            }
-        } catch (IOException | URISyntaxException e) {
-            LOG.debugf("No YAML definitions found in %s", resourcePath);
-        }
-
-        return count;
+      LOG.infof(
+          "Registered YAML case definition: %s/%s v%s from %s",
+          definition.getNamespace(), definition.getName(), definition.getVersion(), resourcePath);
     }
-
-    private void loadAndRegister(String resourcePath) throws IOException {
-        try (InputStream is =
-                     Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath)) {
-            if (is == null) {
-                LOG.warnf("Resource %s not found on classpath", resourcePath);
-                return;
-            }
-
-            io.casehub.model.CaseDefinition schema;
-            try {
-                schema = YAML_MAPPER.readValue(is, io.casehub.model.CaseDefinition.class);
-            } catch (JsonProcessingException e) {
-                throw new IllegalArgumentException(
-                        "Malformed YAML in " + resourcePath + ": " + e.getOriginalMessage(), e);
-            }
-
-            // Build capability and goal maps for validation
-            Map<String, Capability> capabilityMap = new LinkedHashMap<>();
-            Map<String, Goal> goalMap = new LinkedHashMap<>();
-
-            CaseDefinition definition = convertToApiModel(schema, capabilityMap, goalMap);
-
-            // Validate structural integrity
-            validateStructure(definition, capabilityMap, goalMap, resourcePath);
-
-            caseDefinitionRegistry
-                    .registerCaseDefinition(definition)
-                    .await()
-                    .atMost(Duration.ofSeconds(10));
-
-            LOG.infof(
-                    "Registered YAML case definition: %s/%s v%s from %s",
-                    definition.getNamespace(), definition.getName(), definition.getVersion(), resourcePath);
-        }
-    }
-
-    private CaseDefinition convertToApiModel(
-            io.casehub.model.CaseDefinition schema,
-            Map<String, Capability> capabilityMap,
-            Map<String, Goal> goalMap) {
-        CaseDefinition def =
-                new CaseDefinition(schema.getNamespace(), schema.getName(), schema.getVersion());
-        def.setDsl(schema.getDsl());
-        def.setTitle(schema.getTitle());
-        if (schema.getSpec().getCapabilities() != null) {
-            for (var sc : schema.getSpec().getCapabilities()) {
-                Capability cap = new Capability(sc.getName(), sc.getInputSchema(), sc.getOutputSchema());
-                cap.setDescription(sc.getDescription());
-                capabilityMap.put(sc.getName(), cap);
-                def.getCapabilities().add(cap);
-            }
-        }
-
-        // Convert workers
-        if (schema.getSpec().getWorkers() != null) {
-            for (io.casehub.model.Worker sw : schema.getSpec().getWorkers()) {
-                List<Capability> workerCaps =
-                        sw.getCapabilities().stream().map(capabilityMap::get).collect(Collectors.toList());
-
-                Worker worker = new Worker(sw.getName(), workerCaps, sw.getWorkflowAsEmbedded());
-                worker.setDescription(sw.getDescription());
-                def.getWorkers().add(worker);
-            }
-        }
-
-        // Convert bindings
-        if (schema.getSpec().getBindings() != null) {
-            for (io.casehub.model.Binding sr : schema.getSpec().getBindings()) {
-                Capability cap = capabilityMap.get(sr.getCapability());
-                Trigger trigger = null;
-                if (sr.getOn() != null && sr.getOn().getContextChange() != null) {
-                    trigger =
-                            new ContextChangeTrigger(
-                                    new JQExpressionEvaluator(sr.getOn().getContextChange().getFilter()));
-                }
-                Binding rule = Binding.builder()
-                        .name(sr.getName())
-                        .capability(cap)
-                        .on(trigger)
-                        .build();
-                def.getBindings().add(rule);
-            }
-        }
-
-        // Convert milestones
-        if (schema.getSpec().getMilestones() != null) {
-            for (io.casehub.model.Milestone sm : schema.getSpec().getMilestones()) {
-                Milestone milestone =
-                        Milestone.builder()
-                                .name(sm.getName())
-                                .completionCriteria(new JQExpressionEvaluator(sm.getCondition()))
-                                .build();
-                milestone.setDescription(sm.getDescription());
-                def.getMilestones().add(milestone);
-            }
-        }
-
-        // Convert goals
-        if (schema.getSpec().getGoals() != null) {
-            for (io.casehub.model.Goal sg : schema.getSpec().getGoals()) {
-                Goal goal =
-                        new Goal(sg.getName(), new JQExpressionEvaluator(sg.getCondition()), GoalKind.SUCCESS);
-                goal.setDescription(sg.getDescription());
-                goalMap.put(sg.getName(), goal);
-                def.getGoals().add(goal);
-            }
-        }
-
-        // Convert completion
-        if (schema.getSpec().getCompletion() != null) {
-            CaseCompletion sc = schema.getSpec().getCompletion();
-            GoalExpression successExpr = convertGoalExpression(sc.getSuccess(), goalMap);
-            GoalExpression failureExpr = convertGoalExpression(sc.getFailure(), goalMap);
-            def.setCompletion(new GoalBasedCompletion(successExpr, failureExpr));
-        }
-
-        return def;
-    }
-
-    private GoalExpression convertGoalExpression(
-            io.casehub.model.GoalExpression expr, Map<String, Goal> goalMap) {
-        if (expr == null) return null;
-
-        if (expr.getAllOf() != null && !expr.getAllOf().isEmpty()) {
-            List<Goal> goals = expr.getAllOf().stream().map(goalMap::get).collect(Collectors.toList());
-            return new AllOfGoalExpression(goals);
-        }
-
-        if (expr.getAnyOf() != null && !expr.getAnyOf().isEmpty()) {
-            List<Goal> goals = expr.getAnyOf().stream().map(goalMap::get).collect(Collectors.toList());
-            return new AnyOfGoalExpression(goals);
-        }
-
-        return null;
-    }
-
-    private void validateStructure(
-            CaseDefinition definition,
-            Map<String, Capability> capabilityMap,
-            Map<String, Goal> goalMap,
-            String resourcePath) {
-
-        // Validate workers reference existing capabilities
-        if (definition.getWorkers() != null) {
-            for (Worker worker : definition.getWorkers()) {
-                if (worker.getCapabilities() != null) {
-                    for (int i = 0; i < worker.getCapabilities().size(); i++) {
-                        Capability cap = worker.getCapabilities().get(i);
-                        if (cap == null) {
-                            throw new IllegalArgumentException(
-                                    String.format(
-                                            "Failed to load case definition from %s: Worker '%s' references capability at index %d which is not defined. Available capabilities: %s",
-                                            resourcePath, worker.getName(), i, capabilityMap.keySet()));
-                        }
-                    }
-                }
-            }
-        }
-
-        // Validate bindings reference existing capabilities
-        if (definition.getBindings() != null) {
-            for (Binding binding : definition.getBindings()) {
-                if (binding.target() == null) {
-                    throw new IllegalArgumentException(
-                            String.format(
-                                    "Failed to load case definition from %s: Binding '%s' references a capability which is not defined. Available capabilities: %s",
-                                    resourcePath, binding.getName(), capabilityMap.keySet()));
-                }
-            }
-        }
-
-        // Validate goal expressions reference existing goals
-        if (definition.getCompletion() != null
-                && definition.getCompletion() instanceof GoalBasedCompletion) {
-            GoalBasedCompletion completion = (GoalBasedCompletion) definition.getCompletion();
-            validateGoalExpression(completion.getSuccess(), goalMap, "success", resourcePath);
-            validateGoalExpression(completion.getFailure(), goalMap, "failure", resourcePath);
-        }
-    }
-
-    private void validateGoalExpression(
-            GoalExpression expr, Map<String, Goal> goalMap, String context, String resourcePath) {
-        if (expr == null) return;
-
-        java.util.Collection<Goal> goals = null;
-        if (expr instanceof AllOfGoalExpression) {
-            goals = ((AllOfGoalExpression) expr).getGoals();
-        } else if (expr instanceof AnyOfGoalExpression) {
-            goals = ((AnyOfGoalExpression) expr).getGoals();
-        }
-
-        if (goals != null) {
-            int index = 0;
-            for (Goal goal : goals) {
-                if (goal == null) {
-                    throw new IllegalArgumentException(
-                            String.format(
-                                    "Failed to load case definition from %s: Completion %s expression references goal at index %d which is not defined. Available goals: %s",
-                                    resourcePath, context, index, goalMap.keySet()));
-                }
-                index++;
-            }
-        }
-    }
+  }
 }
