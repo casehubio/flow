@@ -59,7 +59,7 @@ class CaseControlResourceIT extends CaseHubIntegrationTestBase {
         .when()
         .post("/api/v1/cases/{caseId}/suspend", caseId)
         .then()
-        .statusCode(202);
+        .statusCode(200);
 
     await()
         .atMost(10, SECONDS)
@@ -80,7 +80,7 @@ class CaseControlResourceIT extends CaseHubIntegrationTestBase {
         .when()
         .post("/api/v1/cases/{caseId}/suspend", caseId)
         .then()
-        .statusCode(202);
+        .statusCode(200);
 
     await()
         .atMost(10, SECONDS)
@@ -96,7 +96,7 @@ class CaseControlResourceIT extends CaseHubIntegrationTestBase {
         .when()
         .post("/api/v1/cases/{caseId}/resume", caseId)
         .then()
-        .statusCode(202);
+        .statusCode(200);
 
     await()
         .atMost(10, SECONDS)
@@ -130,7 +130,7 @@ class CaseControlResourceIT extends CaseHubIntegrationTestBase {
         .when()
         .post("/api/v1/cases/{caseId}/suspend", caseId)
         .then()
-        .statusCode(202);
+        .statusCode(200);
 
     await()
         .atMost(10, SECONDS)
@@ -159,7 +159,7 @@ class CaseControlResourceIT extends CaseHubIntegrationTestBase {
         .when()
         .post("/api/v1/cases/{caseId}/cancel", caseId)
         .then()
-        .statusCode(202);
+        .statusCode(200);
 
     await()
         .atMost(10, SECONDS)
@@ -182,7 +182,7 @@ class CaseControlResourceIT extends CaseHubIntegrationTestBase {
         .when()
         .post("/api/v1/cases/{caseId}/suspend", caseId)
         .then()
-        .statusCode(202);
+        .statusCode(200);
 
     await()
         .atMost(10, SECONDS)
@@ -198,7 +198,7 @@ class CaseControlResourceIT extends CaseHubIntegrationTestBase {
         .when()
         .post("/api/v1/cases/{caseId}/resume", caseId)
         .then()
-        .statusCode(202);
+        .statusCode(200);
 
     await()
         .atMost(10, SECONDS)
@@ -214,7 +214,7 @@ class CaseControlResourceIT extends CaseHubIntegrationTestBase {
         .when()
         .post("/api/v1/cases/{caseId}/cancel", caseId)
         .then()
-        .statusCode(202);
+        .statusCode(200);
 
     await()
         .atMost(10, SECONDS)

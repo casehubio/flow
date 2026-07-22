@@ -48,7 +48,7 @@ class YamlCaseDefinitionLoaderTest {
     // test-yaml-definition.yaml should be loaded
     given()
         .when()
-        .get("/api/v1/case-definitions/test-yaml/YAML%20Test%20Case/1.0.0")
+        .get("/api/v1/case-definitions/test-yaml/YAML Test Case/1.0.0")
         .then()
         .statusCode(200)
         .contentType(ContentType.JSON)
@@ -61,7 +61,7 @@ class YamlCaseDefinitionLoaderTest {
   void convertsCapabilitiesCorrectly() {
     given()
         .when()
-        .get("/api/v1/case-definitions/test-yaml/YAML%20Test%20Case/1.0.0")
+        .get("/api/v1/case-definitions/test-yaml/YAML Test Case/1.0.0")
         .then()
         .statusCode(200)
         .body("capabilities", hasSize(1))
@@ -72,19 +72,19 @@ class YamlCaseDefinitionLoaderTest {
   void convertsWorkersCorrectly() {
     given()
         .when()
-        .get("/api/v1/case-definitions/test-yaml/YAML%20Test%20Case/1.0.0")
+        .get("/api/v1/case-definitions/test-yaml/YAML Test Case/1.0.0")
         .then()
         .statusCode(200)
         .body("workers", hasSize(1))
         .body("workers[0].name", equalTo("data-processor"))
-        .body("workers[0].capabilities", notNullValue());
+        .body("workers[0].capabilityNames", notNullValue());
   }
 
   @Test
   void convertsBindingsCorrectly() {
     given()
         .when()
-        .get("/api/v1/case-definitions/test-yaml/YAML%20Test%20Case/1.0.0")
+        .get("/api/v1/case-definitions/test-yaml/YAML Test Case/1.0.0")
         .then()
         .statusCode(200)
         .body("bindings", hasSize(1))
@@ -96,7 +96,7 @@ class YamlCaseDefinitionLoaderTest {
   void convertsGoalsCorrectly() {
     given()
         .when()
-        .get("/api/v1/case-definitions/test-yaml/YAML%20Test%20Case/1.0.0")
+        .get("/api/v1/case-definitions/test-yaml/YAML Test Case/1.0.0")
         .then()
         .statusCode(200)
         .body("goals", hasSize(1))
@@ -107,7 +107,7 @@ class YamlCaseDefinitionLoaderTest {
   void convertsCompletionCorrectly() {
     given()
         .when()
-        .get("/api/v1/case-definitions/test-yaml/YAML%20Test%20Case/1.0.0")
+        .get("/api/v1/case-definitions/test-yaml/YAML Test Case/1.0.0")
         .then()
         .statusCode(200)
         .body("completion", notNullValue());
@@ -118,7 +118,7 @@ class YamlCaseDefinitionLoaderTest {
     // valid/minimal.yaml should be loaded
     given()
         .when()
-        .get("/api/v1/case-definitions/test-valid/Minimal%20Test/1.0.0")
+        .get("/api/v1/case-definitions/test-valid/Minimal Test/1.0.0")
         .then()
         .statusCode(200)
         .body("namespace", equalTo("test-valid"))
@@ -133,7 +133,7 @@ class YamlCaseDefinitionLoaderTest {
     // valid/complete.yaml should be loaded
     given()
         .when()
-        .get("/api/v1/case-definitions/test-valid/Complete%20Test/2.0.0")
+        .get("/api/v1/case-definitions/test-valid/Complete Test/2.0.0")
         .then()
         .statusCode(200)
         .body("namespace", equalTo("test-valid"))

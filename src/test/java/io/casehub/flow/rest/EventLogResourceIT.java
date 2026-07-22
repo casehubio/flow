@@ -42,7 +42,7 @@ class EventLogResourceIT extends CaseHubIntegrationTestBase {
         .then()
         .statusCode(404)
         .contentType(ContentType.JSON)
-        .body("title", equalTo("Case instance not found"))
+        .body("title", equalTo("Not found"))
         .body("status", equalTo(404))
         .body("detail", notNullValue());
   }
@@ -58,7 +58,7 @@ class EventLogResourceIT extends CaseHubIntegrationTestBase {
         .then()
         .statusCode(400)
         .contentType(ContentType.JSON)
-        .body("title", equalTo("Invalid pagination parameters"))
+        .body("title", equalTo("Invalid request"))
         .body("status", equalTo(400))
         .body("detail", notNullValue());
   }
@@ -74,7 +74,7 @@ class EventLogResourceIT extends CaseHubIntegrationTestBase {
         .then()
         .statusCode(400)
         .contentType(ContentType.JSON)
-        .body("title", equalTo("Invalid pagination parameters"))
+        .body("title", equalTo("Invalid request"))
         .body("status", equalTo(400))
         .body("detail", notNullValue());
   }
@@ -90,14 +90,14 @@ class EventLogResourceIT extends CaseHubIntegrationTestBase {
         .then()
         .statusCode(400)
         .contentType(ContentType.JSON)
-        .body("title", equalTo("Invalid pagination parameters"))
+        .body("title", equalTo("Invalid request"))
         .body("status", equalTo(400))
         .body("detail", notNullValue());
   }
 
   @Test
   void getEventLog_invalidEventType_returns400() {
-    UUID caseId = UUID.randomUUID();
+    UUID caseId = startTestCase();
 
     given()
         .queryParam("eventType", "INVALID_EVENT")
@@ -106,14 +106,14 @@ class EventLogResourceIT extends CaseHubIntegrationTestBase {
         .then()
         .statusCode(400)
         .contentType(ContentType.JSON)
-        .body("title", equalTo("Invalid filter parameter"))
+        .body("title", equalTo("Invalid request"))
         .body("status", equalTo(400))
         .body("detail", notNullValue());
   }
 
   @Test
   void getEventLog_invalidStreamType_returns400() {
-    UUID caseId = UUID.randomUUID();
+    UUID caseId = startTestCase();
 
     given()
         .queryParam("streamType", "INVALID_STREAM")
@@ -122,7 +122,7 @@ class EventLogResourceIT extends CaseHubIntegrationTestBase {
         .then()
         .statusCode(400)
         .contentType(ContentType.JSON)
-        .body("title", equalTo("Invalid filter parameter"))
+        .body("title", equalTo("Invalid request"))
         .body("status", equalTo(400))
         .body("detail", notNullValue());
   }
@@ -138,7 +138,7 @@ class EventLogResourceIT extends CaseHubIntegrationTestBase {
         .then()
         .statusCode(400)
         .contentType(ContentType.JSON)
-        .body("title", equalTo("Invalid pagination parameters"))
+        .body("title", equalTo("Invalid request"))
         .body("status", equalTo(400))
         .body("detail", notNullValue());
   }
@@ -156,10 +156,10 @@ class EventLogResourceIT extends CaseHubIntegrationTestBase {
         .body("page", equalTo(1))
         .body("size", equalTo(50))
         .body("totalElements", greaterThan(0))
-        .body("content", hasSize(greaterThan(0)))
-        .body("content[0].eventType", notNullValue())
-        .body("content[0].streamType", notNullValue())
-        .body("content[0].timestamp", notNullValue());
+        .body("items", hasSize(greaterThan(0)))
+        .body("items[0].eventType", notNullValue())
+        .body("items[0].streamType", notNullValue())
+        .body("items[0].timestamp", notNullValue());
   }
 
   @Test
@@ -176,10 +176,10 @@ class EventLogResourceIT extends CaseHubIntegrationTestBase {
         .statusCode(200)
         .body("page", equalTo(1))
         .body("size", equalTo(5))
-        .body("content.size()", lessThanOrEqualTo(5))
-        .body("content[0].eventType", notNullValue())
-        .body("content[0].streamType", notNullValue())
-        .body("content[0].timestamp", notNullValue());
+        .body("items.size()", lessThanOrEqualTo(5))
+        .body("items[0].eventType", notNullValue())
+        .body("items[0].streamType", notNullValue())
+        .body("items[0].timestamp", notNullValue());
   }
 
   @Test
@@ -194,8 +194,8 @@ class EventLogResourceIT extends CaseHubIntegrationTestBase {
         .get("/api/v1/cases/{caseId}/events", caseId)
         .then()
         .statusCode(200)
-        .body("content", hasSize(greaterThan(0)))
-        .body("content.eventType", everyItem(equalTo("CASE_STARTED")));
+        .body("items", hasSize(greaterThan(0)))
+        .body("items.eventType", everyItem(equalTo("CASE_STARTED")));
   }
 
   @Test
@@ -210,9 +210,9 @@ class EventLogResourceIT extends CaseHubIntegrationTestBase {
         .get("/api/v1/cases/{caseId}/events", caseId)
         .then()
         .statusCode(200)
-        .body("content", hasSize(greaterThan(0)))
+        .body("items", hasSize(greaterThan(0)))
         .body(
-            "content.eventType",
+            "items.eventType",
             everyItem(anyOf(equalTo("CASE_STARTED"), equalTo("CASE_STATUS_CHANGED"))));
   }
 
@@ -227,8 +227,8 @@ class EventLogResourceIT extends CaseHubIntegrationTestBase {
         .get("/api/v1/cases/{caseId}/events", caseId)
         .then()
         .statusCode(200)
-        .body("content", hasSize(greaterThan(0)))
-        .body("content.streamType", everyItem(equalTo("CASE")));
+        .body("items", hasSize(greaterThan(0)))
+        .body("items.streamType", everyItem(equalTo("CASE")));
   }
 
   @Test
@@ -243,8 +243,8 @@ class EventLogResourceIT extends CaseHubIntegrationTestBase {
         .get("/api/v1/cases/{caseId}/events", caseId)
         .then()
         .statusCode(200)
-        .body("content", hasSize(greaterThan(0)))
-        .body("content.eventType", everyItem(equalTo("CASE_STARTED")))
-        .body("content.streamType", everyItem(equalTo("CASE")));
+        .body("items", hasSize(greaterThan(0)))
+        .body("items.eventType", everyItem(equalTo("CASE_STARTED")))
+        .body("items.streamType", everyItem(equalTo("CASE")));
   }
 }

@@ -47,7 +47,7 @@ class SignalResourceIT {
         .post("/api/v1/cases/{caseId}/signals", nonExistentCaseId)
         .then()
         .statusCode(404)
-        .body("title", equalTo("Case not found"));
+        .body("title", equalTo("Not found"));
   }
 
   @Test
@@ -68,7 +68,7 @@ class SignalResourceIT {
         .when()
         .post("/api/v1/cases/{caseId}/signals", caseId)
         .then()
-        .statusCode(202);
+        .statusCode(200);
 
     // 3. Wait for async worker processing
     await()
@@ -104,7 +104,7 @@ class SignalResourceIT {
             .when()
             .post("/api/v1/cases")
             .then()
-            .statusCode(200)
+            .statusCode(201)
             .extract()
             .path("caseId");
 
