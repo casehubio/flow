@@ -72,21 +72,21 @@ class LoaderIntegrationTest {
     // Document Approval v1.0.0
     given()
         .when()
-        .get("/api/v1/case-definitions/test-api/Document%20Approval/1.0.0")
+        .get("/api/v1/case-definitions/test-api/Document Approval/1.0.0")
         .then()
         .statusCode(200);
 
     // Document Approval v2.0.0
     given()
         .when()
-        .get("/api/v1/case-definitions/test-api/Document%20Approval/2.0.0")
+        .get("/api/v1/case-definitions/test-api/Document Approval/2.0.0")
         .then()
         .statusCode(200);
 
     // Invoice Processing
     given()
         .when()
-        .get("/api/v1/case-definitions/test-api/Invoice%20Processing/1.0.0")
+        .get("/api/v1/case-definitions/test-api/Invoice Processing/1.0.0")
         .then()
         .statusCode(200);
   }
@@ -96,7 +96,7 @@ class LoaderIntegrationTest {
     // Verify classpath definition is loaded (ClasspathOnlyCaseHub without CDI annotation)
     given()
         .when()
-        .get("/api/v1/case-definitions/test-classpath/Classpath%20Only%20Case/1.0.0")
+        .get("/api/v1/case-definitions/test-classpath/Classpath Only Case/1.0.0")
         .then()
         .statusCode(200)
         .body("namespace", equalTo("test-classpath"))
@@ -109,19 +109,19 @@ class LoaderIntegrationTest {
     // Verify YAML definitions are loaded
     given()
         .when()
-        .get("/api/v1/case-definitions/test-yaml/YAML%20Test%20Case/1.0.0")
+        .get("/api/v1/case-definitions/test-yaml/YAML Test Case/1.0.0")
         .then()
         .statusCode(200);
 
     given()
         .when()
-        .get("/api/v1/case-definitions/test-valid/Minimal%20Test/1.0.0")
+        .get("/api/v1/case-definitions/test-valid/Minimal Test/1.0.0")
         .then()
         .statusCode(200);
 
     given()
         .when()
-        .get("/api/v1/case-definitions/test-valid/Complete%20Test/2.0.0")
+        .get("/api/v1/case-definitions/test-valid/Complete Test/2.0.0")
         .then()
         .statusCode(200);
   }
@@ -131,7 +131,7 @@ class LoaderIntegrationTest {
     // Document Approval has versions 1.0.0 and 2.0.0
     given()
         .when()
-        .get("/api/v1/case-definitions/test-api/Document%20Approval")
+        .get("/api/v1/case-definitions/test-api/Document Approval")
         .then()
         .statusCode(200)
         .contentType(ContentType.JSON)
@@ -147,25 +147,25 @@ class LoaderIntegrationTest {
     // Verify each namespace exists by checking at least one definition from each
     given()
         .when()
-        .get("/api/v1/case-definitions/test-api/Document%20Approval/1.0.0")
+        .get("/api/v1/case-definitions/test-api/Document Approval/1.0.0")
         .then()
         .statusCode(200);
 
     given()
         .when()
-        .get("/api/v1/case-definitions/test-classpath/Classpath%20Only%20Case/1.0.0")
+        .get("/api/v1/case-definitions/test-classpath/Classpath Only Case/1.0.0")
         .then()
         .statusCode(200);
 
     given()
         .when()
-        .get("/api/v1/case-definitions/test-yaml/YAML%20Test%20Case/1.0.0")
+        .get("/api/v1/case-definitions/test-yaml/YAML Test Case/1.0.0")
         .then()
         .statusCode(200);
 
     given()
         .when()
-        .get("/api/v1/case-definitions/test-valid/Minimal%20Test/1.0.0")
+        .get("/api/v1/case-definitions/test-valid/Minimal Test/1.0.0")
         .then()
         .statusCode(200);
   }
@@ -175,7 +175,7 @@ class LoaderIntegrationTest {
     // Verify YAML definitions have namespace, name, version
     given()
         .when()
-        .get("/api/v1/case-definitions/test-yaml/YAML%20Test%20Case/1.0.0")
+        .get("/api/v1/case-definitions/test-yaml/YAML Test Case/1.0.0")
         .then()
         .statusCode(200)
         .body("namespace", equalTo("test-yaml"))
@@ -184,7 +184,7 @@ class LoaderIntegrationTest {
 
     given()
         .when()
-        .get("/api/v1/case-definitions/test-valid/Minimal%20Test/1.0.0")
+        .get("/api/v1/case-definitions/test-valid/Minimal Test/1.0.0")
         .then()
         .statusCode(200)
         .body("namespace", equalTo("test-valid"))
@@ -197,7 +197,7 @@ class LoaderIntegrationTest {
     // All YAML definitions should have at least one capability and one worker
     given()
         .when()
-        .get("/api/v1/case-definitions/test-yaml/YAML%20Test%20Case/1.0.0")
+        .get("/api/v1/case-definitions/test-yaml/YAML Test Case/1.0.0")
         .then()
         .statusCode(200)
         .body("capabilities", hasSize(1))
@@ -205,7 +205,7 @@ class LoaderIntegrationTest {
 
     given()
         .when()
-        .get("/api/v1/case-definitions/test-valid/Minimal%20Test/1.0.0")
+        .get("/api/v1/case-definitions/test-valid/Minimal Test/1.0.0")
         .then()
         .statusCode(200)
         .body("capabilities", hasSize(1))
@@ -213,7 +213,7 @@ class LoaderIntegrationTest {
 
     given()
         .when()
-        .get("/api/v1/case-definitions/test-valid/Complete%20Test/2.0.0")
+        .get("/api/v1/case-definitions/test-valid/Complete Test/2.0.0")
         .then()
         .statusCode(200)
         .body("capabilities", hasSize(2))
