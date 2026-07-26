@@ -44,3 +44,5 @@ nb-configuration.xml
 /.quarkus/cli/plugins/
 # TLS Certificates
 .certs/
+.claude
+package-lock.json
