@@ -7,7 +7,6 @@ import io.casehub.platform.api.acl.AccessControlProvider;
 import io.casehub.platform.api.acl.AclAction;
 import io.casehub.platform.api.acl.AclResourceType;
 import io.casehub.platform.api.identity.CurrentPrincipal;
-import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.container.ContainerRequestContext;
@@ -28,7 +27,7 @@ public class AclRequestFilter {
   @Inject ObjectMapper objectMapper;
 
   @ServerRequestFilter
-  public Uni<Response> filter(ContainerRequestContext ctx) {
+  public Response filter(ContainerRequestContext ctx) {
     String path = ctx.getUriInfo().getPath();
     if (path.startsWith("/")) path = path.substring(1);
 
@@ -73,15 +72,11 @@ public class AclRequestFilter {
       return null;
     }
 
-    return Uni.createFrom()
-        .completionStage(acl.canAccess(currentPrincipal.actorId(), resourceId, action))
-        .map(
-            allowed -> {
-              if (allowed) return null;
-              return Response.status(403)
-                  .entity(new ProblemDetail("Access denied", 403, "Insufficient permissions"))
-                  .type(MediaType.APPLICATION_JSON_TYPE)
-                  .build();
-            });
+    boolean allowed = acl.canAccess(currentPrincipal.actorId(), resourceId, action);
+    if (allowed) return null;
+    return Response.status(403)
+        .entity(new ProblemDetail("Access denied", 403, "Insufficient permissions"))
+        .type(MediaType.APPLICATION_JSON_TYPE)
+        .build();
   }
 }
