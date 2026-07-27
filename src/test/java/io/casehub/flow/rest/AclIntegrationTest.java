@@ -42,7 +42,7 @@ class AclIntegrationTest {
                 ManagedContext requestContext = Arc.container().requestContext();
                 requestContext.activate();
                 try {
-                    acl.grant(actorId, resourceId, action, null).toCompletableFuture().join();
+                    acl.grant(actorId, resourceId, action, null);
                 } finally {
                     requestContext.terminate();
                 }

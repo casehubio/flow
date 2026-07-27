@@ -1,18 +1,19 @@
 package io.casehub.flow.rest;
 
-import static io.restassured.RestAssured.given;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.awaitility.Awaitility.await;
-
 import io.casehub.api.engine.CaseHubRuntime;
 import io.casehub.engine.common.spi.CaseDefinitionRegistry;
 import jakarta.inject.Inject;
+import org.junit.jupiter.api.AfterEach;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.junit.jupiter.api.AfterEach;
+
+import static io.restassured.RestAssured.given;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.awaitility.Awaitility.await;
 
 public abstract class CaseHubIntegrationTestBase {
 
@@ -25,7 +26,7 @@ public abstract class CaseHubIntegrationTestBase {
     var definition = definitionRegistry.allDefinitions().stream().findFirst().orElseThrow();
     Map<String, Object> context = new HashMap<>();
     try {
-      UUID caseId = caseHubRuntime.startCase(definition, context).toCompletableFuture().get();
+      UUID caseId = caseHubRuntime.startCase(definition, context);
       createdCases.add(caseId);
       return caseId;
     } catch (Exception e) {
