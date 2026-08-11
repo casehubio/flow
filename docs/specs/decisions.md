@@ -76,6 +76,27 @@
 
 ---
 
+## D9: MCP infrastructure as a shared platform module, not per-app
+
+**Choice:** `casehub-platform-mcp` is a shared runtime module containing the fixed `@McpTool` beans (`casehub_model`, `casehub_action`) and `quarkus-mcp-server-sse` dependency. `ModelProvider` SPI lives in `casehub-platform-api` (pure Java). Any app that includes `casehub-platform-mcp` on its classpath gets an MCP endpoint — the model tree reflects only the domains deployed in that app.
+
+**Alternatives:**
+- MCP in scaffold only — limits MCP to the centralized server; app developers lose agent tooling in local dev
+- Per-module MCP servers — current pattern (`casehub-engine-mcp`, qhorus MCP tools); creates the 200-tool problem this architecture solves
+- Custom MCP server implementation — unnecessary, `quarkus-mcp-server-sse` already handles the protocol
+
+**Rationale:** Every app (AML, clinical, devtown, scaffold) benefits from MCP agent access. The model tree auto-composes from whatever ModelProviders are on the classpath — AML sees engine+work+ledger+aml, scaffold sees everything. Same pattern as SmallRye GraphQL auto-discovering `@GraphQLApi` beans.
+
+**Trade-offs:** Apps that don't want MCP must explicitly exclude `casehub-platform-mcp`. But since it's opt-in (you add the dependency), this isn't a real concern.
+
+**Depends on:** D7 (unified generation), D8 (two-hop hierarchy)
+
+**Exploration:** quick
+
+**Status:** captured
+
+---
+
 ## D3: Embedded API stays as-is — no abstraction tax
 
 **Choice:** The embedded Java API (`@Inject CaseHubRuntime`, `@Inject WorkItemService`, etc.) remains unchanged. No shared interface between embedded and remote. Two APIs for two realities.
