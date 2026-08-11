@@ -30,11 +30,47 @@
 
 **Rationale:** GraphQL provides schema-driven type safety, code generation, built-in subscriptions for events, introspection for discovery, and a massive ecosystem. The `@export` directive covers cross-mutation composition. The command builder is more expressive but the 5% it covers beyond GraphQL doesn't justify a custom protocol.
 
-**Trade-offs:** `@export` is non-standard — existing GraphQL tooling won't understand it. Multi-request scoped context (Drools CONVERSATION/APPLICATION) is not covered. The platform loses the command builder's full expressiveness.
+**Trade-offs:** Multi-request scoped context (Drools CONVERSATION/APPLICATION) is not covered. The platform loses the command builder's full expressiveness.
 
 **Depends on:** D1 (centralized model needs a remote API)
 
 **Exploration:** deep-analysis (steelman + devil's advocate of command builder, GraphQL comparison)
+
+**Status:** captured
+
+---
+
+## D7: Unified code generation — one annotation set, four outputs
+
+**Choice:** A single `@PlatformService` annotation set on service interfaces in api/ modules, with a Quarkus build-time extension that generates REST endpoints, GraphQL resolvers, MCP model providers, and typed Java client from the annotated methods.
+
+**Alternatives:**
+- Hand-write each presentation layer separately — triple+ maintenance burden, drift between layers
+- Generate only GraphQL, hand-write REST and MCP — still double maintenance for REST
+- Schema-first (shared IDL, generate everything including Java interface) — inverts the source of truth, Java interface becomes generated
+
+**Rationale:** The service interface IS the source of truth. REST, GraphQL, and MCP are structural mappings from the same operations. MCP is not "smart state-aware discovery" — it's REST operations encoded as data in a navigable tree instead of as individual MCP tools. All four outputs are derivable from method signatures + minimal annotations (domain, operation type, description).
+
+**Trade-offs:** Custom/composite operations (e.g., trustRoutingProfile batching 4 calls) must be hand-written alongside generated code. The generator is a significant upfront investment. Generated code must match the quality of hand-written code (error handling, ACL, tenancy).
+
+**Exploration:** deep-analysis
+
+**Status:** captured
+
+---
+
+## D8: MCP hierarchy — two hops, domain as the only level
+
+**Choice:** MCP model uses a two-hop hierarchy. Hop 1 returns domain list with summaries and operation counts. Hop 2 returns all operations for a domain with parameter details. The `domain` attribute on `@PlatformService` is the only hierarchy input. Fixed MCP tool set (casehub_model, casehub_action) — tool count never grows with operations.
+
+**Alternatives:**
+- Flat (one hop, all operations) — too much data for agent context
+- Deep hierarchy (repo → module → package → class → method) — too many hops, exposes implementation topology
+- Three-level with sub-groups — premature, add later if a domain exceeds ~20 operations
+
+**Rationale:** Two hops balances discovery efficiency with context cost. The agent reads domains in one call, drills into the relevant domain in one more call, then executes. The hierarchy is about what the agent cares about (domain → operations), not how the code is organized.
+
+**Exploration:** quick (clear consensus after discussion)
 
 **Status:** captured
 
