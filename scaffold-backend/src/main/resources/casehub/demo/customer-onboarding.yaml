@@ -1,0 +1,86 @@
+dsl: "0.1"
+version: "1.0.0"
+name: Customer Onboarding
+namespace: demo
+title: Customer onboarding process with KYC verification
+
+spec:
+  capabilities:
+    - name: verifyIdentity
+      description: Verify customer identity documents
+      inputSchema: "{ customerId: .customerId, documentType: .documentType }"
+      outputSchema: "{ verified: .verified, verificationId: .verificationId }"
+    - name: assessRisk
+      description: Assess customer risk profile
+      inputSchema: "{ customerId: .customerId }"
+      outputSchema: "{ riskLevel: .riskLevel, score: .score }"
+    - name: approveAccount
+      description: Final approval for account creation
+      inputSchema: "{ customerId: .customerId, riskLevel: .riskLevel }"
+      outputSchema: "{ approved: .approved, accountId: .accountId }"
+
+  workers:
+    - name: kyc-verifier
+      description: KYC document verification worker
+      capabilities:
+        - verifyIdentity
+      do:
+        - setResult:
+            set:
+              verified: true
+              verificationId: "VER-001"
+
+    - name: risk-assessor
+      description: Risk assessment worker
+      capabilities:
+        - assessRisk
+      do:
+        - setResult:
+            set:
+              riskLevel: "LOW"
+              score: 85
+
+    - name: account-approver
+      description: Account approval worker
+      capabilities:
+        - approveAccount
+      do:
+        - setResult:
+            set:
+              approved: true
+              accountId: "ACC-001"
+
+  bindings:
+    - name: verify-on-submit
+      capability: verifyIdentity
+      on:
+        contextChange:
+          filter: '.customerId != null and .verified == null'
+    - name: assess-on-verify
+      capability: assessRisk
+      on:
+        contextChange:
+          filter: '.verified == true and .riskLevel == null'
+    - name: approve-on-assess
+      capability: approveAccount
+      on:
+        contextChange:
+          filter: '.riskLevel != null and .approved == null'
+
+  goals:
+    - name: identityVerified
+      description: Customer identity has been verified
+      condition: '.verified == true'
+    - name: riskAssessed
+      description: Risk profile has been assessed
+      condition: '.riskLevel != null'
+    - name: accountApproved
+      description: Account has been approved
+      condition: '.approved == true'
+
+  completion:
+    success:
+      allOf:
+        - identityVerified
+        - riskAssessed
+        - accountApproved

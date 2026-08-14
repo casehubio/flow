@@ -1,0 +1,86 @@
+dsl: "0.1"
+version: "1.0.0"
+name: Incident Response
+namespace: demo
+title: IT incident triage, investigation and resolution
+
+spec:
+  capabilities:
+    - name: triageIncident
+      description: Classify severity and assign responder
+      inputSchema: "{ description: .description, source: .source }"
+      outputSchema: "{ severity: .severity, assignee: .assignee }"
+    - name: investigateIncident
+      description: Root cause investigation
+      inputSchema: "{ incidentId: .incidentId }"
+      outputSchema: "{ rootCause: .rootCause, impactScope: .impactScope }"
+    - name: resolveIncident
+      description: Apply fix and verify resolution
+      inputSchema: "{ rootCause: .rootCause }"
+      outputSchema: "{ resolved: .resolved, resolution: .resolution }"
+
+  workers:
+    - name: triage-bot
+      description: Automated incident triage
+      capabilities:
+        - triageIncident
+      do:
+        - setResult:
+            set:
+              severity: "P2"
+              assignee: "ops-team"
+
+    - name: investigator
+      description: Incident investigation worker
+      capabilities:
+        - investigateIncident
+      do:
+        - setResult:
+            set:
+              rootCause: "Memory leak in auth service"
+              impactScope: "us-east-1"
+
+    - name: resolver
+      description: Incident resolution worker
+      capabilities:
+        - resolveIncident
+      do:
+        - setResult:
+            set:
+              resolved: true
+              resolution: "Restarted auth service pods"
+
+  bindings:
+    - name: triage-on-report
+      capability: triageIncident
+      on:
+        contextChange:
+          filter: '.description != null and .severity == null'
+    - name: investigate-on-triage
+      capability: investigateIncident
+      on:
+        contextChange:
+          filter: '.severity != null and .rootCause == null'
+    - name: resolve-on-investigate
+      capability: resolveIncident
+      on:
+        contextChange:
+          filter: '.rootCause != null and .resolved == null'
+
+  goals:
+    - name: triaged
+      description: Incident triaged and assigned
+      condition: '.severity != null'
+    - name: investigated
+      description: Root cause identified
+      condition: '.rootCause != null'
+    - name: resolved
+      description: Incident resolved
+      condition: '.resolved == true'
+
+  completion:
+    success:
+      allOf:
+        - triaged
+        - investigated
+        - resolved

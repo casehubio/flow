@@ -12,7 +12,7 @@
 
 Deployable microservice for running CaseHub's goal-driven coordination engine — shared context, autonomous workers, milestones, goals, and event-driven execution. Provides a standalone Quarkus application with REST endpoints wrapping `casehub-engine`.
 
-**GitHub:** [mdproctor/scaffold](https://github.com/mdproctor/scaffold)
+**GitHub:** [casehubio/scaffold](https://github.com/casehubio/scaffold)
 **Tier:** Integration (pending platform coherence analysis — see casehubio/parent#78)
 
 ---
@@ -20,11 +20,14 @@ Deployable microservice for running CaseHub's goal-driven coordination engine �
 ## Build Commands
 
 ```bash
-# Build and install
+# Build all (backend + web console)
 mvn --batch-mode install
 
 # Skip tests
 mvn --batch-mode install -DskipTests
+
+# Build backend only (headless — no web console)
+mvn --batch-mode install -pl scaffold-backend -am -DskipTests
 ```
 
 ---
@@ -43,7 +46,7 @@ All implementation work must be linked to a GitHub issue:
 - Phase 2 (Task Intake): Detect cross-cutting concerns and suggest breaking into separate issues
 - Phase 3 (Pre-Commit): Verify issue linkage; suggest commit splits when staged changes span multiple concerns
 
-**Repository:** mdproctor/scaffold
+**Repository:** casehubio/scaffold
 
 ---
 
