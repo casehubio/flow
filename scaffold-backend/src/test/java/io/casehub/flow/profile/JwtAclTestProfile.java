@@ -14,10 +14,15 @@ public class JwtAclTestProfile implements QuarkusTestProfile {
 
   @Override
   public Map<String, String> getConfigOverrides() {
-    return Map.of(
-        "quarkus.arc.exclude-types",
-        "io.casehub.platform.oidc.OidcCurrentPrincipal,io.casehub.work.runtime.service.NoOpGroupMembershipProvider,io.casehub.work.runtime.service.TenantScopedPrincipal",
-        "casehub.platform.principal.actorId", "test-actor",
-        "casehub.tenancy.default-id", "test-tenant");
+      return Map.of(
+              "quarkus.arc.exclude-types",
+              "io.casehub.platform.oidc.OidcCurrentPrincipal,io.casehub.work.runtime.service.NoOpGroupMembershipProvider,io.casehub.work.runtime.service.TenantScopedPrincipal",
+              "casehub.platform.principal.actorId", "test-actor",
+              "casehub.tenancy.default-id", "test-tenant",
+              "casehub.cbr.retention.case-types", "test",
+              "casehub.cbr.retention.domain", "test",
+              "casehub.cbr.trust-retention.case-types", "test",
+              "casehub.cbr.trust-retention.domain", "test",
+              "casehub.memory.retention.domain", "test");
   }
 }
