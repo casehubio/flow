@@ -16,7 +16,7 @@ export const orchestrationView = rows(
     selectionTopic: "active-case",
   }),
   hostPanel("orchestration-workbench", {
-    endpoint: "/api/v1",
-    "case-id": "#{row.caseId}",
+    endpoint: "/api/v1/cases",
+    executionId: "#{row.caseId}",
   }),
 );

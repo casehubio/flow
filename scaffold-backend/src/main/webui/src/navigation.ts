@@ -1,4 +1,4 @@
-import { emitPagesEvent } from "@casehubio/pages-component";
+import { emitPagesEvent } from "@casehubio/pages-data";
 import type { LiveSite } from "@casehubio/pages-runtime";
 
 interface NavigationState {

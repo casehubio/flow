@@ -134,9 +134,51 @@ create_workitem "Update runbook for DB pool exhaustion" TASK LOW
 create_workitem "Schedule security audit" TASK MEDIUM
 create_workitem "Review incident post-mortem" TASK MEDIUM
 
+# ── Create label rules (for queue membership) ───────────────────
+log "Creating label rules..."
+
+create_label_rule() {
+  local name="$1" label="$2" condition="$3"
+  local body
+  body=$(jq -n --arg n "$name" --arg l "$label" --arg c "$condition" \
+    '{name: $n, scope: "ORG", conditionLanguage: "jexl", conditionExpression: $c, actions: [{type: "Add", label: $l}]}')
+  RESULT=$(api POST /label-rules -d "$body")
+  if echo "$RESULT" | jq -e '.id' > /dev/null 2>&1; then
+    log "  ✓ Rule: $name → $label"
+  else
+    warn "  ⚠ $name: $(echo "$RESULT" | jq -r '.detail // .message // .error // "unknown"' 2>/dev/null)"
+  fi
+}
+
+create_label_rule "High priority" "priority/high" "priority == 'HIGH' || priority == 'URGENT'"
+create_label_rule "Medium priority" "priority/medium" "priority == 'MEDIUM'"
+create_label_rule "Low priority" "priority/low" "priority == 'LOW'"
+
+# ── Create queue views ───────────────────────────────────────────
+log "Creating queue views..."
+
+create_queue() {
+  local name="$1" pattern="$2"
+  local body
+  body=$(jq -n --arg n "$name" --arg p "$pattern" \
+    '{name: $n, labelPattern: $p}')
+  RESULT=$(api POST /queues -d "$body")
+  if echo "$RESULT" | jq -e '.id' > /dev/null 2>&1; then
+    QUEUE_ID=$(echo "$RESULT" | jq -r '.id')
+    log "  ✓ Queue: $name ($QUEUE_ID)"
+  else
+    warn "  ⚠ $name: $(echo "$RESULT" | jq -r '.detail // .message // .error // "unknown"' 2>/dev/null)"
+  fi
+}
+
+create_queue "Urgent & High Priority" "priority/high"
+create_queue "Medium Priority" "priority/medium"
+create_queue "Low Priority" "priority/low"
+
 # ── Summary ──────────────────────────────────────────────────────
 log ""
 log "Seed complete. Open $BASE_URL to view the console."
 CASES_COUNT=$(api GET /api/v1/cases 2>/dev/null | jq '.totalElements' 2>/dev/null || echo '?')
 WI_COUNT=$(api GET /workitems 2>/dev/null | jq 'length' 2>/dev/null || echo '?')
-log "  Definitions: $DEFS_COUNT | Cases: $CASES_COUNT | Work items: $WI_COUNT"
+Q_COUNT=$(api GET /queues 2>/dev/null | jq 'length' 2>/dev/null || echo '?')
+log "  Definitions: $DEFS_COUNT | Cases: $CASES_COUNT | Work items: $WI_COUNT | Queues: $Q_COUNT"

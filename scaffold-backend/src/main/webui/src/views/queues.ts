@@ -9,8 +9,8 @@ export const queuesView = rows(
   hostPanel("kpi-metric-row", { endpoint: "/queues/health" }),
   dataTable({
     lookup: lookup("queues", groupBy(null,
-      col("id"), col("name"), col("pendingCount"),
-      col("activeCount"), col("completedCount"),
+      col("id"), col("name"), col("labelPattern"),
+      col("scope"),
     )),
     sortable: true,
     filter: { enabled: true },
